@@ -116,6 +116,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private IReadOnlyList<GameRelease>? _gameReleases;
     private ReleaseFetchResult? _lastFetchResult;
     private DateTimeOffset? _lastSuccessfulFetchUtc;
+    private DateTimeOffset? _lastForcedLauncherCheckUtc; // última comprobación del launcher pedida a mano («Buscar ahora»)
     private bool _fetchFailed;
     private string? _fetchErrorMessage;
     private bool _fetchErrorIsRateLimit;

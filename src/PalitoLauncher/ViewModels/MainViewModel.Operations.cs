@@ -1162,10 +1162,14 @@ public sealed partial class MainViewModel
     private Task CheckForUpdatesAsync(bool includeLauncher) => Guarded(async () =>
     {
         if (_isFetching) return;
+        bool checkLauncher = includeLauncher && _settings.CheckLauncherUpdates;
 
         if (_lastSuccessfulFetchUtc is { } last && DateTimeOffset.UtcNow - last < LauncherConfig.ApiFreshnessWindow)
         {
+            // La lista del juego se acaba de consultar y no se repite. La del launcher es otra consulta que al arrancar
+            // suele saltarse por su intervalo de 2 h: se hace igualmente (antes «Buscar ahora» no la hacía en el primer minuto).
             ShowToast("Comprobado hace un momento. " + BuildUpdateSummary());
+            if (checkLauncher) await CheckLauncherUpdateManuallyAsync();
             return;
         }
 
@@ -1181,8 +1185,23 @@ public sealed partial class MainViewModel
             : BuildUpdateSummary());
 
         await EvaluateAutoUpdateAsync();
-        if (includeLauncher && _settings.CheckLauncherUpdates) await CheckLauncherUpdateAsync(force: true);
+        if (checkLauncher) await CheckLauncherUpdateManuallyAsync();
     }, "Buscar actualizaciones");
+
+    /// <summary>
+    /// Comprobación forzada de versión nueva del launcher («Buscar ahora»). Cada una gasta 1 consulta a la API, así que si ya
+    /// se forzó hace menos de LauncherConfig.ApiFreshnessWindow no se repite (varios clics seguidos no gastan cupo).
+    /// </summary>
+    private async Task CheckLauncherUpdateManuallyAsync()
+    {
+        var now = DateTimeOffset.UtcNow;
+        // Una marca en el futuro (reloj cambiado) no bloquea la comprobación.
+        if (_lastForcedLauncherCheckUtc is { } previous && previous <= now && now - previous < LauncherConfig.ApiFreshnessWindow)
+            return;
+
+        _lastForcedLauncherCheckUtc = now;
+        await CheckLauncherUpdateAsync(force: true);
+    }
 
     private string BuildUpdateSummary() => State switch
     {

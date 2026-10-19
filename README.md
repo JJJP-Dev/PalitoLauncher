@@ -55,6 +55,24 @@ temporales del launcher). No hace falta tocar ninguna de las dos.
 Pulsa **JUGAR**. En **Ajustes → Juego** puedes elegir qué hace el launcher al abrir el juego (mantenerse abierto,
 minimizarse o cerrarse) y añadir argumentos de lanzamiento.
 
+### Dar tu opinión
+
+Al cerrar el juego tras una partida de unos minutos, el launcher puede preguntarte **«¿Qué tal la partida?»**. Pulsa
+las estrellas o **Dar mi opinión** para responder una encuesta de un minuto, o **Ahora no** para cerrarlo. También
+puedes escribir cuando quieras con **Enviar opinión** (en Inicio o en el menú **⋯**).
+
+- Tu respuesta le llega al desarrollador junto con la versión del juego y de Windows, y tu nombre o apodo solo si lo
+  escribes (es opcional). No se envía nada más.
+- Si no hay internet, se guarda y se envía sola más tarde.
+- Para que no te pregunte más: **No volver a preguntar** en el aviso, o **Ajustes → Juego → Pedirme opinión al cerrar
+  el juego**.
+
+### Roadmap
+
+La página **Roadmap** (icono de bandera, a la izquierda) muestra cómo avanza el desarrollo de Coop2D: qué hitos están
+terminados, cuáles en curso y cuál viene después, con el porcentaje de tareas hechas. En **Inicio** verás los que
+están en curso. Los datos salen de GitHub y se actualizan solos.
+
 ### Actualizaciones
 
 - Al abrir el launcher (y cada hora mientras está abierto) se comprueba si hay versión nueva. Si la hay, el botón
@@ -146,6 +164,28 @@ Si existe `launcher/background.png` en la rama `main` del repo del juego
 - Cambiarlo en GitHub cambia el fondo de todos los launchers sin publicar nada (se descarga con caché y no gasta cupo
   de la API). Si lo borras, los launchers vuelven al fondo por defecto.
 
+### Roadmap
+
+La página **Roadmap** y la tarjeta «En desarrollo» de Inicio salen de los **milestones** públicos de Coop2D
+(`GET /repos/JJJP-Dev/Coop2D/milestones?state=all`), ordenados por número:
+
+- Cerrado → completado; abierto con alguna tarea (issue) cerrada → en curso; el primero abierto sin tareas cerradas
+  tras los que están en curso → siguiente; el resto → planificado. El progreso es tareas cerradas / totales.
+- La fase sale del título («Pre …» → Pre-producción, «1.0 …» o mayor → Lanzamiento, el resto → Producción) y la frase
+  de cada hito, del texto tras «Pregunta:» u «Objetivo:» de la descripción.
+- Gasta **1 consulta de la API como mucho cada 10 minutos** (`LauncherConfig.MilestonesFreshnessWindow`): al abrir el
+  launcher y en la comprobación de cada hora (que se salta si queda poco cupo), salvo que se pulse **Actualizar** en
+  la página. Sin conexión muestra la última copia guardada.
+
+### Encuesta y opiniones
+
+**Enviar opinión** y la invitación al cerrar el juego publican las respuestas en un canal de Discord mediante un
+webhook. Las preguntas y el webhook se configuran en `launcher/feedback.json` de la rama `main` de Coop2D, sin sacar
+versión del launcher; sin ese archivo se usa una encuesta por defecto y las respuestas esperan en una bandeja de salida
+en cada PC. Cómo crear el webhook, el formato del JSON, cómo probarlo y qué llega a Discord:
+**[docs/FEEDBACK.md](docs/FEEDBACK.md)** (ejemplo listo para copiar en
+[docs/feedback.example.json](docs/feedback.example.json)).
+
 ### Publicar una versión del launcher
 
 El launcher se publica en el repo público **JJJP-Dev/PalitoLauncher** con GitHub Actions
@@ -176,8 +216,8 @@ workflow** indicando la versión.
 
 Todo lo que identifica al juego y a los repos está en
 [`src/PalitoLauncher.Core/LauncherConfig.cs`](src/PalitoLauncher.Core/LauncherConfig.cs): repos de GitHub, nombre del
-exe del juego, patrón de assets, nombre del acceso directo, URL del fondo e intervalos de comprobación. Cambia los
-valores y recompila. La versión del launcher está en [`Directory.Build.props`](Directory.Build.props).
+exe del juego, patrón de assets, nombre del acceso directo, URLs del fondo y de la encuesta e intervalos de
+comprobación. Cambia los valores y recompila. La versión del launcher está en [`Directory.Build.props`](Directory.Build.props).
 
 ### Compilar en local
 
@@ -218,7 +258,8 @@ src/
     Install/                   instalación/actualización atómica, extracción (.zip/.rar/.7z), recuperación
     Launch/                    lanzar y vigilar el proceso del juego
     Update/                    auto-actualización y auto-instalación del launcher
-    State/                     lógica de estados de la pantalla (qué hace el botón principal)
+    State/                     lógica de estados de la pantalla (qué hace el botón principal) y del roadmap
+    Feedback/                  encuesta (remota/local/por defecto) y envío de opiniones a Discord con bandeja de salida
     Settings/ Logging/ Diagnostics/ Net/ Util/
   PalitoLauncher/              interfaz WPF (MVVM hecho a mano)
     Assets/ Themes/ Views/ ViewModels/ Services/ Helpers/ Converters/
@@ -227,6 +268,7 @@ tests/PalitoLauncher.UI.Tests/ tests de la capa WPF: ViewModels, MarkdownRendere
                                vistas (hilo STA propio, sin mostrar ventanas, sin red, datos en %TEMP%)
 scripts/                       publish.ps1, generate-icons.ps1
 docs/PUBLICAR.md               guía para publicar builds del juego
+docs/FEEDBACK.md               encuesta de opiniones: webhook de Discord y launcher/feedback.json (+ feedback.example.json)
 .github/workflows/             ci.yml, release.yml
 ```
 
@@ -240,8 +282,9 @@ El cupo lo comparten todos los PCs detrás de la misma IP (amigos en la misma ca
 - hace comprobaciones automáticas cada 60 min y se las salta si quedan 10 peticiones o menos;
 - guarda las releases en caché y funciona sin conexión con esos datos.
 
-Descargar las builds (CDN de GitHub) y el fondo (raw.githubusercontent.com) no gasta cupo de la API. Un arranque normal
-gasta 1 petición (más 1, como mucho cada 2 h, para buscar versión nueva del launcher).
+Descargar las builds (CDN de GitHub), el fondo y la encuesta (raw.githubusercontent.com) no gasta cupo de la API. Un
+arranque normal gasta 2 peticiones: releases y roadmap (este, como mucho una vez cada 10 min). Más 1, como mucho cada
+2 h, para buscar versión nueva del launcher.
 
 ### Solución de problemas
 

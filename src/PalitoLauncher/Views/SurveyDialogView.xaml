@@ -1,0 +1,214 @@
+<UserControl x:Class="PalitoLauncher.Views.SurveyDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PalitoLauncher.ViewModels"
+             xmlns:views="clr-namespace:PalitoLauncher.Views"
+             Focusable="False">
+    <UserControl.Resources>
+        <!-- ═══ Plantillas de respuesta por tipo de pregunta ═══ -->
+
+        <!-- Rating: 5 estrellas grandes -->
+        <DataTemplate DataType="{x:Type vm:RatingQuestionViewModel}">
+            <views:StarRating Value="{Binding Value, Mode=TwoWay}" StarSize="30" ShowCaption="True" HorizontalAlignment="Left"
+                              Margin="-3,0,0,0" AutomationProperties.Name="{Binding AutomationName}" />
+        </DataTemplate>
+
+        <!-- Scale: fila de botones Min..Max con las etiquetas bajo los extremos -->
+        <DataTemplate DataType="{x:Type vm:ScaleQuestionViewModel}">
+            <StackPanel HorizontalAlignment="Left">
+                <ItemsControl ItemsSource="{Binding Options}" Focusable="False" IsTabStop="False"
+                              AutomationProperties.Name="{Binding AutomationName}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:SurveyOptionViewModel}">
+                            <RadioButton Style="{StaticResource ScaleRadio}" Content="{Binding Text}" GroupName="{Binding GroupName}"
+                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                         AutomationProperties.Name="{Binding AutomationName}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <DockPanel Margin="2,6,6,0" LastChildFill="False" Visibility="{Binding HasLabels, Converter={StaticResource BoolToVis}}">
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding MinLabel}" Style="{StaticResource SmallDimText}" MaxWidth="180" />
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding MaxLabel}" Style="{StaticResource SmallDimText}" MaxWidth="180"
+                               Margin="12,0,0,0" />
+                </DockPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Choice: pills de selección única -->
+        <DataTemplate DataType="{x:Type vm:ChoiceQuestionViewModel}">
+            <ItemsControl ItemsSource="{Binding Options}" Focusable="False" IsTabStop="False" Margin="0,0,0,-8"
+                          AutomationProperties.Name="{Binding AutomationName}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:SurveyOptionViewModel}">
+                        <RadioButton Style="{StaticResource PillRadio}" Content="{Binding Text}" GroupName="{Binding GroupName}"
+                                     IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                     AutomationProperties.Name="{Binding AutomationName}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
+
+        <!-- Multi: pills de selección múltiple («Ninguno» excluye a las demás) -->
+        <DataTemplate DataType="{x:Type vm:MultiQuestionViewModel}">
+            <ItemsControl ItemsSource="{Binding Options}" Focusable="False" IsTabStop="False" Margin="0,0,0,-8"
+                          AutomationProperties.Name="{Binding AutomationName}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:SurveyOptionViewModel}">
+                        <CheckBox Style="{StaticResource PillCheck}" Content="{Binding Text}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                  AutomationProperties.Name="{Binding AutomationName}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
+
+        <!-- Text: cuadro multilínea con texto de ejemplo y contador -->
+        <DataTemplate DataType="{x:Type vm:TextQuestionViewModel}">
+            <StackPanel>
+                <Grid>
+                    <TextBox Style="{StaticResource MultilineTextBox}" Text="{Binding AnswerText, UpdateSourceTrigger=PropertyChanged}"
+                             MaxLength="{Binding MaxLength, Mode=OneWay}" AutomationProperties.Name="{Binding AutomationName}"
+                             AutomationProperties.HelpText="{Binding HelpText, Mode=OneWay}" />
+                    <TextBlock Text="{Binding Placeholder}" Margin="11,8,11,0" FontSize="13" TextWrapping="Wrap" IsHitTestVisible="False"
+                               Foreground="{StaticResource TextDisabledBrush}"
+                               Visibility="{Binding ShowPlaceholder, Converter={StaticResource BoolToVis}}" />
+                </Grid>
+                <TextBlock Text="{Binding CounterText}" FontSize="11.5" HorizontalAlignment="Right" Margin="0,4,2,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsNearLimit}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Border x:Name="DialogBorder" Width="620" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1" CornerRadius="12">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="32" ShadowDepth="6" Opacity="0.55" Color="Black" />
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Cabecera -->
+            <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="28,24,28,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource SubtleAccentBrush}" VerticalAlignment="Top"
+                            Margin="0,2,16,0">
+                        <TextBlock Text="&#xE939;" Style="{StaticResource GlyphText}" FontSize="19" Foreground="{StaticResource AccentBrush}"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Intro}" Style="{StaticResource BodyText}" Foreground="{StaticResource TextDimBrush}"
+                                   Margin="0,6,0,0" LineHeight="20"
+                                   Visibility="{Binding HasIntro, Converter={StaticResource BoolToVis}}" />
+                        <TextBlock Text="{Binding MetaText}" Style="{StaticResource SmallDimText}" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Preguntas -->
+            <ScrollViewer x:Name="QuestionsScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Focusable="False" Padding="28,20,22,6">
+                <StackPanel x:Name="QuestionsPanel" IsEnabled="{Binding IsInputEnabled}" Margin="0,0,6,0">
+                    <ItemsControl ItemsSource="{Binding Questions}" Focusable="False" IsTabStop="False">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SurveyQuestionViewModel}">
+                                <StackPanel Margin="0,0,0,24">
+                                    <TextBlock TextWrapping="Wrap" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                                               AutomationProperties.Name="{Binding AutomationName}">
+                                        <Run Text="{Binding NumberText, Mode=OneWay}" Foreground="{StaticResource TextDimBrush}" />
+                                        <Run Text="{Binding Text, Mode=OneWay}" />
+                                        <Run Text="{Binding RequiredMarker, Mode=OneWay}" Foreground="{StaticResource AccentBrush}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Hint}" Style="{StaticResource DimText}" Margin="0,3,0,0"
+                                               Visibility="{Binding HasHint, Converter={StaticResource BoolToVis}}" />
+                                    <ContentControl Content="{Binding}" Focusable="False" IsTabStop="False" Margin="0,10,0,0" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Apodo opcional -->
+                    <TextBlock Text="Tu nombre o apodo (opcional)" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                    <TextBlock Text="Para que el equipo sepa de quién es. Déjalo vacío si prefieres que sea anónima." Style="{StaticResource DimText}"
+                               Margin="0,3,0,0" />
+                    <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" Width="320" HorizontalAlignment="Left"
+                             Margin="0,10,0,18" AutomationProperties.Name="Tu nombre o apodo (opcional)" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Pie -->
+            <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="28,14,28,20">
+                <StackPanel>
+                    <Border Margin="0,0,0,12" CornerRadius="8" Padding="12,9" BorderThickness="1" Background="#1AFF5C6C" BorderBrush="#55FF5C6C"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                        <!-- LiveSetting: la vista avisa al lector de pantalla cuando aparece (LiveRegion.Announce) -->
+                        <TextBlock x:Name="ErrorText" Text="{Binding ErrorMessage}" FontSize="13" TextWrapping="Wrap"
+                                   Foreground="{StaticResource DangerBrush}" AutomationProperties.LiveSetting="Assertive" />
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72E;" Style="{StaticResource GlyphText}" FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                                   VerticalAlignment="Top" Margin="0,2,8,0" />
+                        <TextBlock Text="{Binding FooterNote}" Style="{StaticResource DimText}" FontSize="12" MaxWidth="530" />
+                    </StackPanel>
+
+                    <!-- Botones -->
+                    <DockPanel Margin="0,14,0,0" LastChildFill="False"
+                               Visibility="{Binding IsFooterButtonsVisible, Converter={StaticResource BoolToVis}}">
+                        <TextBlock DockPanel.Dock="Left" Text="{Binding MissingRequiredText}" Style="{StaticResource DimText}" VerticalAlignment="Center"
+                                   Visibility="{Binding ShowMissingRequired, Converter={StaticResource BoolToVis}}" />
+                        <!-- El nombre accesible sigue al texto («Enviando…» se anuncia al empezar el envío) -->
+                        <Button x:Name="SendButton" DockPanel.Dock="Right" MinWidth="120" Margin="10,0,0,0" Style="{StaticResource AccentButton}"
+                                Content="{Binding SendButtonText}" Command="{Binding SendCommand}"
+                                AutomationProperties.Name="{Binding SendButtonText}" AutomationProperties.LiveSetting="Polite" />
+                        <Button x:Name="CancelButton" DockPanel.Dock="Right" MinWidth="100" Content="Cancelar" Command="{Binding CancelCommand}" />
+                    </DockPanel>
+
+                    <!-- Confirmación: descartar (Esc/Cancelar con respuestas) o salir del launcher con la opinión sin enviar -->
+                    <DockPanel Margin="0,14,0,0" LastChildFill="True"
+                               Visibility="{Binding IsConfirming, Converter={StaticResource BoolToVis}}">
+                        <Button x:Name="DiscardButton" DockPanel.Dock="Right" MinWidth="110" Margin="10,0,0,0" Style="{StaticResource DangerButton}"
+                                Content="{Binding ConfirmActionText}" Command="{Binding DiscardCommand}" />
+                        <Button x:Name="KeepEditingButton" DockPanel.Dock="Right" MinWidth="100" Margin="12,0,0,0" Content="{Binding KeepEditingText}"
+                                Command="{Binding KeepEditingCommand}" />
+                        <TextBlock x:Name="ConfirmTextBlock" Text="{Binding ConfirmText}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" AutomationProperties.LiveSetting="Assertive" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

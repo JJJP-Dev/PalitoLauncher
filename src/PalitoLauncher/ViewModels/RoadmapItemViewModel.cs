@@ -1,0 +1,181 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
+using System.Windows.Documents;
+using System.Windows.Input;
+using PalitoLauncher.Core.GitHub;
+using PalitoLauncher.Core.Logging;
+using PalitoLauncher.Core.State;
+using PalitoLauncher.Helpers;
+using PalitoLauncher.Services;
+
+namespace PalitoLauncher.ViewModels;
+
+/// <summary>Un milestone del roadmap (página Roadmap, tarjeta "En desarrollo" de Inicio y barra global de hitos).</summary>
+public sealed class RoadmapItemViewModel : ObservableObject
+{
+    private static readonly Regex GeneratedFooterRegex = new(@"generated\s+(by|with)", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+        TimeSpan.FromMilliseconds(100));
+
+    private bool _isExpanded;
+    private FlowDocument? _descriptionDocument;
+
+    public RoadmapItemViewModel(RoadmapItem item, bool showSeparator)
+    {
+        Item = item ?? throw new ArgumentNullException(nameof(item));
+        ShowSeparator = showSeparator;
+
+        var milestone = item.Milestone;
+        Title = string.IsNullOrWhiteSpace(milestone.Title) ? $"Hito {milestone.Number.ToString(CultureInfo.InvariantCulture)}" : milestone.Title.Trim();
+        Summary = string.IsNullOrWhiteSpace(item.Summary) ? null : item.Summary.Trim();
+
+        ProgressText = SafeProgressText(milestone);
+        ProgressValue = item.Status == MilestoneStatus.Done ? 100 : Math.Round((milestone.Progress ?? 0) * 100, 1);
+
+        var dates = new List<string>();
+        if (item.Status == MilestoneStatus.Done && milestone.ClosedAt is { } closed) dates.Add($"Completado el {UiFormat.Date(closed)}");
+        else if (milestone.DueOn is { } due) dates.Add($"Fecha prevista: {UiFormat.Date(due)}");
+        DatesText = dates.Count > 0 ? string.Join(" · ", dates) : null;
+
+        OpenOnGitHubCommand = new RelayCommand(() => ShellService.OpenUrl(Item.Milestone.HtmlUrl), () => CanOpenOnGitHub);
+        ToggleExpandedCommand = new RelayCommand(() => IsExpanded = !IsExpanded);
+    }
+
+    public RoadmapItem Item { get; }
+    public int Number => Item.Milestone.Number;
+    public string Title { get; }
+
+    /// <summary>Frase corta (tras «Pregunta:» u «Objetivo:»), o null.</summary>
+    public string? Summary { get; }
+
+    public bool HasSummary => Summary != null;
+
+    public MilestoneStatus Status => Item.Status;
+    public bool IsDone => Item.Status == MilestoneStatus.Done;
+    public bool IsInProgress => Item.Status == MilestoneStatus.InProgress;
+    public bool IsNext => Item.Status == MilestoneStatus.Next;
+    public bool IsPlanned => Item.Status == MilestoneStatus.Planned;
+
+    public string StatusText => Item.Status switch
+    {
+        MilestoneStatus.Done => "Completado",
+        MilestoneStatus.InProgress => "En curso",
+        MilestoneStatus.Next => "Siguiente",
+        _ => "Planificado",
+    };
+
+    /// <summary>Nombre accesible de la fila: "Pre 2 · Gameplay prototype, En curso, 14 de 25 tareas · 56 %".</summary>
+    public string AutomationName => ShowProgress ? $"{Title}, {StatusText}, {ProgressText}" : $"{Title}, {StatusText}";
+
+    /// <summary>Tooltip del segmento de la barra global.</summary>
+    public string SegmentToolTip => $"{Title} · {StatusText}";
+
+    /// <summary>Barra y texto de progreso solo para los que están en curso o completados.</summary>
+    public bool ShowProgress => IsDone || IsInProgress;
+
+    /// <summary>0..100.</summary>
+    public double ProgressValue { get; }
+
+    /// <summary>"14 de 25 tareas · 56 %" / "Completado" / "Sin tareas todavía".</summary>
+    public string ProgressText { get; }
+
+    /// <summary>"Completado el 01/10/2026" / "Fecha prevista: 01/12/2026", o null.</summary>
+    public string? DatesText { get; }
+
+    public bool HasDates => DatesText != null;
+
+    /// <summary>No es la primera fila de su fase (se dibuja una línea encima).</summary>
+    public bool ShowSeparator { get; }
+
+    public bool CanOpenOnGitHub => ShellService.IsWebUrl(Item.Milestone.HtmlUrl);
+
+    /// <summary>Al expandir se genera la descripción completa (perezoso).</summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (!SetProperty(ref _isExpanded, value)) return;
+            if (value && _descriptionDocument == null) DescriptionDocument = RenderDescription(Item.Milestone.Description);
+        }
+    }
+
+    public FlowDocument? DescriptionDocument
+    {
+        get => _descriptionDocument;
+        private set => SetProperty(ref _descriptionDocument, value);
+    }
+
+    public ICommand OpenOnGitHubCommand { get; }
+    public ICommand ToggleExpandedCommand { get; }
+
+    private static FlowDocument RenderDescription(string? description)
+    {
+        var text = CleanDescription(description);
+        return MarkdownRenderer.Render(string.IsNullOrWhiteSpace(text) ? "*Este hito aún no tiene descripción.*" : text);
+    }
+
+    /// <summary>
+    /// Quita el pie automático del final de la descripción ("---" seguido de "_Generated by …_"), que no aporta nada a
+    /// los jugadores. El resto se deja tal cual. Nunca lanza.
+    /// </summary>
+    internal static string CleanDescription(string? description)
+    {
+        if (string.IsNullOrWhiteSpace(description)) return "";
+        try
+        {
+            var lines = description.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n').ToList();
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[^1])) lines.RemoveAt(lines.Count - 1);
+            if (lines.Count == 0 || !GeneratedFooterRegex.IsMatch(lines[^1])) return description.Trim();
+
+            // Busca el separador "---" justo antes del pie (solo líneas vacías entre medias).
+            for (var i = lines.Count - 2; i >= 0; i--)
+            {
+                var line = lines[i].Trim();
+                if (line.Length == 0) continue;
+                if (line.Trim('-', ' ').Length == 0 && line.Count(c => c == '-') >= 3)
+                    return string.Join("\n", lines.Take(i)).Trim();
+                break;
+            }
+            return string.Join("\n", lines.Take(lines.Count - 1)).Trim();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("No se pudo limpiar la descripción del milestone.", ex);
+            return description.Trim();
+        }
+    }
+
+    private static string SafeProgressText(MilestoneInfo milestone)
+    {
+        try
+        {
+            return RoadmapLogic.FormatProgress(milestone);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("No se pudo formatear el progreso del milestone.", ex);
+            return milestone.IsClosed ? "Completado" : "";
+        }
+    }
+}
+
+/// <summary>Una fase del roadmap (Pre-producción, Producción, Lanzamiento) con sus hitos.</summary>
+public sealed class RoadmapPhaseViewModel
+{
+    public RoadmapPhaseViewModel(string title, IReadOnlyList<RoadmapItemViewModel> items)
+    {
+        Title = string.IsNullOrWhiteSpace(title) ? "Otros" : title;
+        Items = items;
+        int done = items.Count(i => i.IsDone);
+        CountText = items.Count == 1
+            ? (done == 1 ? "1 de 1 completado" : "0 de 1 completado")
+            : $"{done} de {items.Count} completados";
+    }
+
+    public string Title { get; }
+
+    /// <summary>"1 de 4 completados".</summary>
+    public string CountText { get; }
+
+    public IReadOnlyList<RoadmapItemViewModel> Items { get; }
+}

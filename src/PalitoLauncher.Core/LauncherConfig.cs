@@ -44,6 +44,16 @@ public static class LauncherConfig
     public const string RemoteBackgroundUrl =
         "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/background.png";
 
+    /// <summary>
+    /// Configuración opcional de la encuesta de feedback servida desde el repo del juego (preguntas y webhook de Discord).
+    /// Si no existe se usa la encuesta por defecto y las respuestas se quedan en la bandeja de salida hasta que haya webhook.
+    /// </summary>
+    public const string RemoteFeedbackConfigUrl =
+        "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/feedback.json";
+
+    /// <summary>Respuestas de /milestones más recientes que esto se reutilizan sin preguntar (el roadmap cambia despacio).</summary>
+    public static readonly TimeSpan MilestonesFreshnessWindow = TimeSpan.FromMinutes(10);
+
     /// <summary>Nombre de la carpeta que se crea dentro de la carpeta elegida por el usuario.</summary>
     public const string InstallFolderName = "Coop2D";
 
@@ -71,6 +81,7 @@ public static class LauncherConfig
 
     public static string GameRepoUrl => $"https://github.com/{GameRepoOwner}/{GameRepoName}";
     public static string GameReleasesPageUrl => $"{GameRepoUrl}/releases";
+    public static string GameMilestonesPageUrl => $"{GameRepoUrl}/milestones";
     public static string LauncherRepoUrl => $"https://github.com/{LauncherRepoOwner}/{LauncherRepoName}";
     public static string LauncherReleasesPageUrl => $"{LauncherRepoUrl}/releases";
 }

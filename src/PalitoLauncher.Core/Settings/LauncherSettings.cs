@@ -47,6 +47,15 @@ public sealed class LauncherSettings
     /// <summary>Versión del launcher que el usuario decidió omitir.</summary>
     public string? SkippedLauncherVersion { get; set; }
 
+    /// <summary>Pedir opinión (encuesta) al cerrar el juego tras una partida suficientemente larga.</summary>
+    public bool AskFeedbackAfterSession { get; set; } = true;
+
+    /// <summary>Nombre o apodo opcional que se adjunta al feedback (se recuerda para la próxima vez).</summary>
+    public string? FeedbackNickname { get; set; }
+
+    /// <summary>Última vez (UTC) que se mostró la invitación a dar opinión tras una partida (para no preguntar demasiado).</summary>
+    public DateTimeOffset? LastFeedbackPromptUtc { get; set; }
+
     /// <summary>Copia profunda (todas las propiedades son inmutables o valores).</summary>
     public LauncherSettings Clone() => (LauncherSettings)MemberwiseClone();
 }

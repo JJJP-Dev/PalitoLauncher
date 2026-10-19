@@ -17,4 +17,10 @@ public partial class SettingsView : UserControl
     {
         if (DataContext is SettingsViewModel settings) settings.CommitLaunchArguments();
     }
+
+    // El apodo de las opiniones se guarda al perder el foco.
+    private void FeedbackNicknameBox_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (DataContext is SettingsViewModel settings) settings.CommitFeedbackNickname();
+    }
 }

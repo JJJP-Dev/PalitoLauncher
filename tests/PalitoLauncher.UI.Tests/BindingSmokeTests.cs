@@ -3,8 +3,10 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Interop;
 using System.Windows.Media;
+using PalitoLauncher.Core.Feedback;
 using PalitoLauncher.Core.GitHub;
 using PalitoLauncher.Core.Install;
+using PalitoLauncher.Core.Util;
 using PalitoLauncher.Services;
 using PalitoLauncher.UI.Tests.TestHelpers;
 using PalitoLauncher.ViewModels;
@@ -45,6 +47,15 @@ public sealed class BindingSmokeTests
         vm.Releases[0].IsExpanded = true; // notas de la versión dentro de la plantilla de la lista
         vm.ShowToast("Mensaje de prueba");
 
+        // 1.0.3: roadmap con datos (y un hito expandido), invitación a opinar, aviso de cierre con «Contarnos qué pasó»
+        // y opiniones pendientes en Ajustes.
+        vm.ApplyRoadmapResult(TestFeedback.Result());
+        vm.RoadmapItems[1].IsExpanded = true;
+        vm.ShowFeedbackPrompt(34, 0);
+        MainViewModelAccess.CrashNotice(vm) = "Coop2D se cerró de forma inesperada (código 3).";
+        MainViewModelAccess.UpdateState(vm);
+        vm.Settings.SetPendingFeedback(2);
+
         var window = new MainWindow(vm);
         var root = (FrameworkElement)window.Content;
         try
@@ -52,6 +63,11 @@ public sealed class BindingSmokeTests
             await LayoutAsync(window);
             Assert.Contains(Descendants(root), d => d is HomeView);
             AssertShowsText(root, vm.StatusText);
+            AssertShowsText(root, "En desarrollo");                 // tarjeta del roadmap en Inicio
+            AssertShowsText(root, vm.RoadmapCurrent[0].Title);
+            AssertShowsText(root, vm.FeedbackPromptTitle);          // invitación tras la partida
+            Assert.Contains(Descendants(root), d => d is StarRating);
+            AssertShowsText(root, "Contarnos qué pasó");            // segunda acción del aviso
 
             vm.NavigateCommand.Execute("Versions");
             await LayoutAsync(window);
@@ -59,10 +75,20 @@ public sealed class BindingSmokeTests
             AssertShowsText(root, vm.Releases[0].VersionText); // la plantilla de la lista se generó de verdad
             Assert.Contains(Descendants(root), d => d is FlowDocumentScrollViewer { Document: not null });
 
+            vm.NavigateCommand.Execute("Roadmap");
+            await LayoutAsync(window);
+            Assert.True(vm.IsRoadmapPage);
+            Assert.Contains(Descendants(root), d => d is RoadmapView);
+            AssertShowsText(root, vm.RoadmapSummaryText);
+            AssertShowsText(root, vm.RoadmapPhases[0].Title);
+            AssertShowsText(root, vm.RoadmapItems[0].ProgressText);
+            Assert.Contains(Descendants(root), d => d is FlowDocumentScrollViewer { Document: { } doc } && ReferenceEquals(doc, vm.RoadmapItems[1].DescriptionDocument));
+
             vm.NavigateCommand.Execute("Settings");
             await LayoutAsync(window);
             Assert.True(vm.IsSettingsPage);
             AssertShowsText(root, vm.Settings.LauncherVersionText);
+            AssertShowsText(root, vm.Settings.PendingFeedbackText);
 
             vm.NavigateCommand.Execute("Home");
             await LayoutAsync(window);
@@ -94,6 +120,35 @@ public sealed class BindingSmokeTests
             Assert.Null(await shown);
             await LayoutAsync(window);
 
+            // Encuesta: todas las plantillas, error de envío y confirmación de descartar.
+            var survey = new SurveyDialogViewModel(TestFeedback.Survey(),
+                new SurveyContext { Trigger = FeedbackTrigger.AfterSession, InitialRating = 4, LauncherVersion = "1.0.3", SessionMinutes = 34 },
+                _ => throw new LauncherException("Error de envío de prueba."));
+            var surveyShown = vm.Dialogs.ShowDialogAsync(survey, survey.Completion);
+            await LayoutAsync(window);
+            Assert.Contains(Descendants(root), d => d is SurveyDialogView);
+            AssertShowsText(root, survey.Title);
+            AssertShowsText(root, survey.MetaText);
+            Assert.Contains(Descendants(root), d => d is RadioButton);
+            Assert.Contains(Descendants(root), d => d is CheckBox);
+            Assert.Contains(Descendants(root), d => d is TextBox { AcceptsReturn: true });
+
+            survey.Questions.OfType<ChoiceQuestionViewModel>().First().Options[0].IsSelected = true;
+            await ((AsyncRelayCommand)survey.SendCommand).ExecuteAsync(null);
+            await LayoutAsync(window);
+            AssertShowsText(root, "Error de envío de prueba.");
+
+            survey.Cancel();
+            await LayoutAsync(window);
+            AssertShowsText(root, "¿Descartar tus respuestas?");
+            var exit = survey.ConfirmExitAsync(); // cerrar el launcher con la opinión a medias
+            await LayoutAsync(window);
+            AssertShowsText(root, "Tienes una opinión sin enviar. ¿Salir sin enviarla?");
+            survey.DiscardCommand.Execute(null);
+            Assert.True(await exit);
+            Assert.Null(await surveyShown);
+            await LayoutAsync(window);
+
             Assert.Equal(IntPtr.Zero, new WindowInteropHelper(window).Handle); // nunca se creó la ventana de Windows
         }
         finally
@@ -102,11 +157,15 @@ public sealed class BindingSmokeTests
         }
 
         await WpfHost.FlushAsync();
-        Assert.Empty(errors.Messages);
+        Assert.True(errors.Messages.Count == 0, string.Join(Environment.NewLine, errors.Messages)); // el mensaje completo, no truncado
         Assert.Empty(WpfHost.UnhandledExceptions);
     });
 
-    public static TheoryData<string> Views => new() { "Home", "Versions", "Settings", "InstallDialog", "InstallDialogBlocked", "MessageDialog" };
+    public static TheoryData<string> Views => new()
+    {
+        "Home", "Versions", "Settings", "InstallDialog", "InstallDialogBlocked", "MessageDialog",
+        "Roadmap", "RoadmapLoading", "SurveyDialog",
+    };
 
     [Theory]
     [MemberData(nameof(Views))]
@@ -118,6 +177,12 @@ public sealed class BindingSmokeTests
         var releases = SampleReleases();
         await MainViewModelAccess.ApplyReleasesAsync(vm, releases);
         foreach (var item in vm.Releases) item.IsExpanded = true;
+        if (view != "RoadmapLoading")
+        {
+            vm.ApplyRoadmapResult(TestFeedback.Result());
+            foreach (var item in vm.RoadmapItems) item.IsExpanded = true;
+        }
+        vm.Settings.SetPendingFeedback(1, waitsForTeam: true); // la variante neutra (sin webhook); la de aviso va en el otro test
 
         FrameworkElement element;
         switch (view)
@@ -130,6 +195,18 @@ public sealed class BindingSmokeTests
                 break;
             case "Settings":
                 element = new SettingsView { DataContext = vm.Settings };
+                break;
+            case "Roadmap":
+            case "RoadmapLoading":
+                element = new RoadmapView { DataContext = vm };
+                break;
+            case "SurveyDialog":
+                element = new SurveyDialogView
+                {
+                    DataContext = new SurveyDialogViewModel(TestFeedback.Survey(),
+                        new SurveyContext { InitialRating = 3, Nickname = "Palito", LauncherVersion = "1.0.3", GameVersionDisplay = "0.0.3 · Prototipo 2" },
+                        _ => Task.FromResult(FeedbackSendOutcome.Sent)),
+                };
                 break;
             case "InstallDialog":
             case "InstallDialogBlocked":
@@ -155,7 +232,7 @@ public sealed class BindingSmokeTests
         await LayoutAsync(element);
         Assert.True(Descendants(element).Count() > 10, "La vista no generó su árbol visual: la prueba no estaría mirando nada.");
         await WpfHost.FlushAsync();
-        Assert.Empty(errors.Messages);
+        Assert.True(errors.Messages.Count == 0, string.Join(Environment.NewLine, errors.Messages)); // el mensaje completo, no truncado
     });
 
     private static IReadOnlyList<GameRelease> SampleReleases() => new[]

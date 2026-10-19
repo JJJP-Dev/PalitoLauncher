@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Windows.Media.Imaging;
 using PalitoLauncher.Core;
@@ -49,6 +50,10 @@ public sealed partial class MainViewModel
             RunFlow(() => CheckLauncherUpdateAsync(force: false), "Buscar actualización del launcher", showErrors: false);
 
         RunFlow(EvaluateAutoUpdateAsync, "Actualización automática", showErrors: false);
+
+        // También en segundo plano y sin diálogos: roadmap (milestones) y opiniones (encuesta + bandeja de salida).
+        RunFlow(() => RefreshRoadmapAsync(bypassFreshness: false, automatic: true), "Roadmap", showErrors: false);
+        RunFlow(InitializeFeedbackAsync, "Opiniones", showErrors: false);
     }
 
     private async Task InitializeCoreAsync()
@@ -195,6 +200,7 @@ public sealed partial class MainViewModel
             {
                 Log.Info("El juego ya estaba abierto: se sigue su proceso.");
                 IsGameRunning = true;
+                MarkGameSessionStarted(restart: true); // la partida se mide desde que nos enganchamos
             }
         }
 
@@ -447,12 +453,18 @@ public sealed partial class MainViewModel
         if (remaining is int r && r <= LauncherConfig.RateLimitReserveForUser)
         {
             Log.Info($"Comprobación periódica omitida: quedan {r} consultas a GitHub.");
-            return;
+        }
+        else
+        {
+            await RefreshReleasesAsync(bypassFreshness: false, _lifetimeCts.Token);
+            await EvaluateAutoUpdateAsync();
+            if (_settings.CheckLauncherUpdates) await CheckLauncherUpdateAsync(force: false);
+            // El roadmap reutiliza su caché 10 min y vuelve a mirar la reserva de consultas.
+            await RefreshRoadmapAsync(bypassFreshness: false, automatic: true);
         }
 
-        await RefreshReleasesAsync(bypassFreshness: false, _lifetimeCts.Token);
-        await EvaluateAutoUpdateAsync();
-        if (_settings.CheckLauncherUpdates) await CheckLauncherUpdateAsync(force: false);
+        // Encuesta y opiniones pendientes (raw.githubusercontent.com y Discord: no gastan cupo de la API de GitHub).
+        await PeriodicFeedbackAsync();
     }
 
     /// <summary>Fondo remoto (raw.githubusercontent.com, sin gastar cupo de la API). Si falla, queda el degradado.</summary>
@@ -545,6 +557,7 @@ public sealed partial class MainViewModel
                 if (_disposed) return;
                 // El evento llega en diferido: se mira el proceso real por si ya se cerró.
                 IsGameRunning = IsProcessRunningSafe();
+                if (IsGameRunning) MarkGameSessionStarted(restart: false);
                 UpdateState();
             }
             catch (Exception ex)
@@ -565,7 +578,9 @@ public sealed partial class MainViewModel
 
     private async Task HandleGameExitedAsync(int exitCode)
     {
-        Log.Info($"El juego se cerró (código {exitCode}).");
+        var duration = TakeGameSessionDuration();
+        var played = TakeSessionGameVersion(); // la versión que se jugó (luego puede actualizarse o desinstalarse)
+        Log.Info($"El juego se cerró (código {exitCode}, partida de {duration.TotalMinutes.ToString("0.#", CultureInfo.InvariantCulture)} min).");
         IsGameRunning = false;
 
         if (_minimizedByUs)
@@ -574,12 +589,26 @@ public sealed partial class MainViewModel
             RestoreRequested?.Invoke(this, EventArgs.Empty);
         }
 
+        // Cerrado por el propio launcher (instalar/actualizar/reparar/desinstalar/mover o «Forzar cierre»): ni aviso de
+        // cierre inesperado ni invitación a opinar.
         bool forcedByUs = _suppressNextCrashNotice;
         _suppressNextCrashNotice = false;
-        if (exitCode != 0 && exitCode != -1 && !forcedByUs)
+        if (forcedByUs)
+        {
+            Log.Info("Sin invitación a opinar: el juego lo cerró el launcher.");
+        }
+        else if (exitCode != 0 && exitCode != -1)
         {
             _crashNotice = $"{Game} se cerró de forma inesperada (código {exitCode}).";
             Log.Warn(_crashNotice);
+            // El aviso lleva «Contarnos qué pasó» (abre la encuesta con los datos de esta partida) en vez de la invitación.
+            _crashSessionMinutes = duration > TimeSpan.Zero ? SessionMinutesOf(duration) : null;
+            _crashExitCode = exitCode;
+            _crashGameVersion = played;
+        }
+        else
+        {
+            RunFlow(() => MaybePromptFeedbackAsync(duration, exitCode, played), "Invitación a opinar", showErrors: false);
         }
 
         UpdateState();

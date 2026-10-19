@@ -43,6 +43,9 @@ public sealed class SettingsViewModel : ObservableObject
     private bool _isDriveMissing;
     private int _sizeVersion;
     private string? _selfUpdateNote;
+    private string _feedbackNickname = "";
+    private int _pendingFeedbackCount;
+    private bool _pendingFeedbackWaitsForTeam;
 
     public SettingsViewModel(MainViewModel owner)
     {
@@ -188,6 +191,55 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    // ───────────── Opiniones (tarjeta Juego) ─────────────
+
+    /// <summary>Invitar a responder la encuesta al cerrar el juego tras una partida suficientemente larga.</summary>
+    public bool AskFeedbackAfterSession
+    {
+        get => S.AskFeedbackAfterSession;
+        set
+        {
+            if (S.AskFeedbackAfterSession == value) return;
+            S.AskFeedbackAfterSession = value;
+            OnPropertyChanged();
+            _owner.OnSettingsChanged(SettingChange.General);
+        }
+    }
+
+    /// <summary>Apodo para las opiniones. Se guarda al perder el foco (<see cref="CommitFeedbackNickname"/>).</summary>
+    public string FeedbackNickname
+    {
+        get => _feedbackNickname;
+        set
+        {
+            var text = value ?? "";
+            if (text.Length > SurveyDialogViewModel.NicknameMaxLength) text = text[..SurveyDialogViewModel.NicknameMaxLength];
+            SetProperty(ref _feedbackNickname, text);
+        }
+    }
+
+    public int NicknameMaxLength => SurveyDialogViewModel.NicknameMaxLength;
+
+    /// <summary>
+    /// "1 opinión pendiente de enviar" / "3 opiniones pendientes de enviar"; sin webhook en la encuesta, "3 opiniones
+    /// pendientes: se enviarán cuando el equipo active los envíos" (no es un problema de conexión).
+    /// </summary>
+    public string PendingFeedbackText => (_pendingFeedbackCount == 1, _pendingFeedbackWaitsForTeam) switch
+    {
+        (true, false) => "1 opinión pendiente de enviar",
+        (false, false) => $"{_pendingFeedbackCount} opiniones pendientes de enviar",
+        (true, true) => "1 opinión pendiente: se enviará cuando el equipo active los envíos",
+        (false, true) => $"{_pendingFeedbackCount} opiniones pendientes: se enviarán cuando el equipo active los envíos",
+    };
+
+    public bool HasPendingFeedback => _pendingFeedbackCount > 0;
+
+    /// <summary>Las pendientes esperan a que el equipo publique el webhook: se muestran sin color de aviso.</summary>
+    public bool PendingFeedbackWaitsForTeam => _pendingFeedbackWaitsForTeam;
+
+    public ICommand SendFeedbackCommand => _owner.SendFeedbackCommand;
+    public ICommand RetryFeedbackSendCommand => _owner.RetryFeedbackSendCommand;
+
     // ───────────── Launcher ─────────────
 
     public string LauncherVersionText { get; }
@@ -207,6 +259,7 @@ public sealed class SettingsViewModel : ObservableObject
     {
         _argumentsDebounce.Stop();
         _launchArguments = S.LaunchArguments ?? "";
+        _feedbackNickname = S.FeedbackNickname ?? "";
 
         // Un valor guardado que no está en la lista (editado a mano) se añade para no perderlo.
         var kbps = Math.Max(0, S.MaxDownloadSpeedKBps);
@@ -245,6 +298,38 @@ public sealed class SettingsViewModel : ObservableObject
         if (string.Equals(S.LaunchArguments ?? "", value, StringComparison.Ordinal)) return;
         S.LaunchArguments = value;
         _owner.OnSettingsChanged(SettingChange.General);
+    }
+
+    /// <summary>Guarda el apodo de las opiniones si cambió (al perder el foco o al cerrar). Vacío = anónimo (null).</summary>
+    public void CommitFeedbackNickname()
+    {
+        var value = (_feedbackNickname ?? "").Trim();
+        if (string.Equals(S.FeedbackNickname ?? "", value, StringComparison.Ordinal)) return;
+        S.FeedbackNickname = value.Length > 0 ? value : null;
+        _owner.OnSettingsChanged(SettingChange.General);
+    }
+
+    /// <summary>Vuelve a leer los ajustes de opiniones (los cambió la encuesta o la invitación).</summary>
+    internal void ReloadFeedbackSettings()
+    {
+        _feedbackNickname = S.FeedbackNickname ?? "";
+        OnPropertyChanged(nameof(FeedbackNickname));
+        OnPropertyChanged(nameof(AskFeedbackAfterSession));
+    }
+
+    /// <summary>
+    /// Número de opiniones en la bandeja de salida. <paramref name="waitsForTeam"/>: la encuesta no tiene webhook, así que
+    /// esperan a que el equipo active los envíos.
+    /// </summary>
+    internal void SetPendingFeedback(int count, bool waitsForTeam = false)
+    {
+        count = Math.Max(0, count);
+        if (_pendingFeedbackCount == count && _pendingFeedbackWaitsForTeam == waitsForTeam) return;
+        _pendingFeedbackCount = count;
+        _pendingFeedbackWaitsForTeam = waitsForTeam;
+        OnPropertyChanged(nameof(PendingFeedbackText));
+        OnPropertyChanged(nameof(HasPendingFeedback));
+        OnPropertyChanged(nameof(PendingFeedbackWaitsForTeam));
     }
 
     /// <summary>Actualiza la tarjeta "Instalación" (ruta y tamaño en disco, calculado en segundo plano).</summary>

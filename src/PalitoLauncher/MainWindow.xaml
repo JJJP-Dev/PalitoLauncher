@@ -31,6 +31,9 @@
         <DataTemplate DataType="{x:Type vm:InstallDialogViewModel}">
             <views:InstallDialogView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SurveyDialogViewModel}">
+            <views:SurveyDialogView />
+        </DataTemplate>
 
         <!-- Color del aviso secundario según su tipo -->
         <Style x:Key="NoticeText" TargetType="TextBlock">
@@ -106,6 +109,9 @@
                             <Button Style="{StaticResource NavButton}" Content="&#xE8FD;" Margin="0,0,0,8"
                                     Tag="{Binding IsVersionsPage}" Command="{Binding NavigateCommand}" CommandParameter="Versions"
                                     ToolTip="Versiones" AutomationProperties.Name="Versiones" />
+                            <Button Style="{StaticResource NavButton}" Content="&#xE7C1;" Margin="0,0,0,8"
+                                    Tag="{Binding IsRoadmapPage}" Command="{Binding NavigateCommand}" CommandParameter="Roadmap"
+                                    ToolTip="Roadmap" AutomationProperties.Name="Roadmap" />
                             <Button Style="{StaticResource NavButton}" Content="&#xE713;"
                                     Tag="{Binding IsSettingsPage}" Command="{Binding NavigateCommand}" CommandParameter="Settings"
                                     ToolTip="Ajustes" AutomationProperties.Name="Ajustes" />
@@ -184,31 +190,79 @@
                     <Grid Grid.Row="1">
                         <views:HomeView Visibility="{Binding IsHomePage, Converter={StaticResource BoolToVis}}" />
                         <views:VersionsView Visibility="{Binding IsVersionsPage, Converter={StaticResource BoolToVis}}" />
+                        <views:RoadmapView Visibility="{Binding IsRoadmapPage, Converter={StaticResource BoolToVis}}" />
                         <Grid Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}">
                             <views:SettingsView DataContext="{Binding Settings}" />
                         </Grid>
                     </Grid>
 
-                    <!-- Toast -->
-                    <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,16" MaxWidth="440"
-                            Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
-                            CornerRadius="10" Padding="16,12" IsHitTestVisible="False"
-                            Visibility="{Binding IsToastVisible, Converter={StaticResource BoolToVis}}"
-                            AutomationProperties.LiveSetting="Polite">
-                        <Border.Effect>
-                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.45" Color="Black" />
-                        </Border.Effect>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="&#xE946;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
-                                       Margin="0,1,12,0" VerticalAlignment="Top" />
-                            <TextBlock Grid.Column="1" Text="{Binding ToastText}" TextWrapping="Wrap" FontSize="13.5"
-                                       Foreground="{StaticResource TextBrush}" />
-                        </Grid>
-                    </Border>
+                    <!-- Toast e invitación a opinar tras la partida, apilados abajo a la derecha (no tapan la barra de acción) -->
+                    <StackPanel Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,16">
+                        <!-- Toast -->
+                        <Border HorizontalAlignment="Right" MaxWidth="440"
+                                Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                CornerRadius="10" Padding="16,12" IsHitTestVisible="False"
+                                Visibility="{Binding IsToastVisible, Converter={StaticResource BoolToVis}}">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.45" Color="Black" />
+                            </Border.Effect>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&#xE946;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
+                                           Margin="0,1,12,0" VerticalAlignment="Top" />
+                                <!-- La ventana lo anuncia al lector de pantalla cada vez que cambia (LiveRegion.Announce) -->
+                                <TextBlock x:Name="ToastTextBlock" Grid.Column="1" Text="{Binding ToastText}" TextWrapping="Wrap" FontSize="13.5"
+                                           Foreground="{StaticResource TextBrush}" AutomationProperties.LiveSetting="Polite" />
+                            </Grid>
+                        </Border>
+
+                        <!-- Invitación a opinar (estilo del banner del launcher) -->
+                        <Border x:Name="FeedbackPrompt" Width="380" HorizontalAlignment="Right" Margin="0,10,0,0"
+                                Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1"
+                                CornerRadius="12" Visibility="{Binding IsFeedbackPromptVisible, Converter={StaticResource BoolToVis}}"
+                                AutomationProperties.Name="Invitación a dar tu opinión" AutomationProperties.LiveSetting="Polite">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.5" Color="Black" />
+                            </Border.Effect>
+                            <Border Background="{StaticResource BannerBrush}" CornerRadius="11" Padding="18,14,12,14">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="&#xE939;" Style="{StaticResource GlyphText}" FontSize="16" Foreground="{StaticResource AccentBrush}"
+                                                   VerticalAlignment="Top" Margin="0,2,10,0" />
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding FeedbackPromptTitle}" FontSize="14.5" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                       Foreground="{StaticResource TextBrush}" />
+                                            <TextBlock Text="{Binding FeedbackPromptText}" Style="{StaticResource DimText}" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="28" Height="28" FontSize="10" Margin="6,-4,0,0"
+                                                VerticalAlignment="Top" Content="&#xE711;" Command="{Binding DismissFeedbackPromptCommand}"
+                                                ToolTip="Ahora no" AutomationProperties.Name="Cerrar invitación" />
+                                    </Grid>
+                                    <!-- Elegir abre la encuesta: las flechas solo mueven el foco (se elige con clic, Enter o Espacio) -->
+                                    <views:StarRating x:Name="FeedbackPromptStars" Margin="23,10,0,0" StarSize="24" HorizontalAlignment="Left"
+                                                      Value="{Binding FeedbackPromptRating, Mode=TwoWay}"
+                                                      RatedCommand="{Binding OpenFeedbackFromPromptCommand}" CommitOnNavigation="False"
+                                                      AutomationProperties.Name="Valora la partida de 1 a 5 estrellas" />
+                                    <StackPanel Orientation="Horizontal" Margin="26,10,0,0">
+                                        <Button Style="{StaticResource AccentButton}" Content="Dar mi opinión"
+                                                Command="{Binding OpenFeedbackFromPromptCommand}" />
+                                        <Button Style="{StaticResource GhostButton}" Content="Ahora no" Margin="6,0,0,0"
+                                                Command="{Binding DismissFeedbackPromptCommand}" />
+                                    </StackPanel>
+                                    <Button Style="{StaticResource LinkButton}" Content="No volver a preguntar" FontSize="12" Margin="26,8,0,0"
+                                            Foreground="{StaticResource TextDimBrush}" Command="{Binding NeverAskFeedbackCommand}" />
+                                </StackPanel>
+                            </Border>
+                        </Border>
+                    </StackPanel>
 
                     <!-- ═══════ Barra de acción inferior ═══════ -->
                     <Border Grid.Row="2" Background="{StaticResource ActionBarBrush}" BorderBrush="{StaticResource BorderBrush}"
@@ -246,6 +300,7 @@
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Style="{StaticResource NoticeGlyph}" />
                                     <TextBlock Grid.Column="1" Style="{StaticResource NoticeText}" Text="{Binding SecondaryNoticeText}" FontSize="13"
@@ -253,7 +308,10 @@
                                     <Button Grid.Column="2" Style="{StaticResource LinkButton}" Margin="12,0,0,0" VerticalAlignment="Center"
                                             Content="{Binding SecondaryNoticeActionText}" Command="{Binding SecondaryNoticeActionCommand}"
                                             Visibility="{Binding HasSecondaryNoticeAction, Converter={StaticResource BoolToVis}}" />
-                                    <Button Grid.Column="3" Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="10" Margin="8,0,0,0"
+                                    <Button Grid.Column="3" Style="{StaticResource LinkButton}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                            Content="{Binding SecondaryNoticeAction2Text}" Command="{Binding SecondaryNoticeAction2Command}"
+                                            Visibility="{Binding HasSecondaryNoticeAction2, Converter={StaticResource BoolToVis}}" />
+                                    <Button Grid.Column="4" Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="10" Margin="8,0,0,0"
                                             Content="&#xE711;" Command="{Binding DismissSecondaryNoticeCommand}"
                                             ToolTip="Descartar aviso" AutomationProperties.Name="Descartar aviso"
                                             Visibility="{Binding CanDismissSecondaryNotice, Converter={StaticResource BoolToVis}}" />
@@ -302,6 +360,11 @@
                                             </MenuItem.Icon>
                                         </MenuItem>
                                         <Separator />
+                                        <MenuItem Header="Enviar opinión" Command="{Binding SendFeedbackCommand}">
+                                            <MenuItem.Icon>
+                                                <TextBlock Text="&#xE939;" Style="{StaticResource MenuGlyph}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
                                         <MenuItem Header="Crear informe para el desarrollador" Command="{Binding CreateReportCommand}">
                                             <MenuItem.Icon>
                                                 <TextBlock Text="&#xE8A5;" Style="{StaticResource MenuGlyph}" />

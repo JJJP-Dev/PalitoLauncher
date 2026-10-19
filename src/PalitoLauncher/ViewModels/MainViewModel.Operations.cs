@@ -20,6 +20,7 @@ namespace PalitoLauncher.ViewModels;
 // Acciones del usuario y operaciones largas (instalar, actualizar, reparar, mover, desinstalar, jugar, informes…).
 public sealed partial class MainViewModel
 {
+    /// <summary>El launcher cerró el juego a la fuerza: la próxima salida no es un cierre inesperado ni invita a opinar.</summary>
     private bool _suppressNextCrashNotice;
 
     // ───────────── Ejecución segura de flujos ─────────────
@@ -786,6 +787,7 @@ public sealed partial class MainViewModel
 
         Log.Info($"Juego lanzado ({(status.Info != null ? DisplayOf(status.Info) : exe)}).");
         _crashNotice = null;
+        MarkGameSessionStarted(restart: true);
         IsGameRunning = IsProcessRunningSafe();
         UpdateState();
         if (!IsGameRunning) return; // se cerró al instante (el aviso llega por GameExited)
@@ -832,9 +834,10 @@ public sealed partial class MainViewModel
     }
 
     /// <summary>
-    /// Cierra el juego a la fuerza. Solo marca "no avisar de cierre inesperado" si va a morir el proceso SEGUIDO (el único
-    /// que dispara GameExited, que es quien consume la marca): matar uno no seguido (abierto desde el Explorador) no debe
-    /// ocultar el aviso de un cierre real posterior. Si Kill falla y el seguido sigue vivo, se quita la marca.
+    /// Cierra el juego a la fuerza. Solo marca "no avisar de cierre inesperado ni invitar a opinar" si va a morir el proceso
+    /// SEGUIDO (el único que dispara GameExited, que es quien consume la marca): matar uno no seguido (abierto desde el
+    /// Explorador) no debe ocultar el aviso de un cierre real posterior. Si Kill falla y el seguido sigue vivo, se quita la
+    /// marca.
     /// </summary>
     private async Task KillGameAsync(string gameDir, string exe)
     {
@@ -1438,6 +1441,9 @@ public sealed partial class MainViewModel
             ["Conservar descargas"] = _settings.KeepDownloadedArchives ? "sí" : "no",
             ["Al abrir el juego"] = _settings.AfterLaunch.ToString(),
             ["Argumentos de lanzamiento"] = _settings.LaunchArguments,
+            ["Roadmap"] = RoadmapDiagnosticText(),
+            ["Opiniones pendientes de enviar"] = _feedback == null ? "(envío no disponible)" : _pendingFeedbackCount.ToString(inv),
+            ["Pedir opinión tras la partida"] = _settings.AskFeedbackAfterSession ? "sí" : "no",
             ["Aviso en pantalla"] = SecondaryNoticeText,
             ["Texto de estado"] = StatusText,
         };
@@ -1501,9 +1507,10 @@ public sealed partial class MainViewModel
 
     // ───────────── Cierre de la ventana ─────────────
 
-    /// <summary>Qué hacer si el usuario intenta cerrar la ventana ahora.</summary>
+    /// <summary>Qué hacer si el usuario intenta cerrar la ventana ahora (primero, una opinión a medias).</summary>
     public CloseDecision GetCloseDecision()
     {
+        if (HasUnsentFeedback) return CloseDecision.ConfirmUnsentFeedback;
         if (!IsBusy) return CloseDecision.Allow;
         if (_operationKind == OperationKind.LauncherUpdate)
             return (_launcherDownloadProgress?.Fraction ?? 0) >= 1 ? CloseDecision.MustWait : CloseDecision.Confirm;
@@ -1540,6 +1547,8 @@ public sealed partial class MainViewModel
                 ? "Hay una descarga en curso. Si cierras ahora quedará en pausa y podrás continuarla la próxima vez."
                 : "Hay una operación en curso. Si cierras ahora se cancelará.";
 
+        // Una encuesta abierta (vacía: con respuestas ya se preguntó antes) dejaría esta pregunta esperando detrás, sin verse.
+        CloseEmptySurvey();
         var answer = await Dialogs.ShowAsync("¿Cerrar el launcher?", message, "Cerrar", "Seguir");
         if (answer != DialogResult.Primary) return false;
         if (!IsBusy) return true;

@@ -2,7 +2,7 @@
   <!-- Propiedades comunes a todos los proyectos. La versión del launcher se cambia aquí
        (o la sobreescribe el workflow de release con la del tag: v1.2.3 -> 1.2.3). -->
   <PropertyGroup>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
     <Authors>JJJP-Dev</Authors>
     <Company>PalitoGames</Company>
     <Product>Palito Launcher</Product>

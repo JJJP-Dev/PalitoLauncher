@@ -6,6 +6,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using PalitoLauncher.Core.Logging;
+using PalitoLauncher.Helpers;
 using PalitoLauncher.Services;
 using PalitoLauncher.ViewModels;
 
@@ -32,7 +33,11 @@ public partial class MainWindow : Window
         DataContext = _vm;
 
         ApplyInitialSize();
-        StateChanged += (_, _) => UpdateWindowStateVisuals();
+        StateChanged += (_, _) =>
+        {
+            UpdateWindowStateVisuals();
+            _vm.SetWindowMinimized(WindowState == WindowState.Minimized); // la invitación a opinar espera a que se vea
+        };
         Activated += (_, _) => NativeMethods.StopFlashing(new WindowInteropHelper(this).Handle);
         PreviewKeyDown += OnPreviewKeyDown;
 
@@ -118,6 +123,8 @@ public partial class MainWindow : Window
     {
         if (e.PropertyName is nameof(MainViewModel.TaskbarProgressState) or nameof(MainViewModel.TaskbarProgressValue))
             UpdateTaskbar();
+        else if (e.PropertyName is nameof(MainViewModel.ToastText) or nameof(MainViewModel.IsToastVisible) && _vm.IsToastVisible)
+            LiveRegion.Announce(ToastTextBlock); // p.ej. «¡Gracias! Tu opinión ya le ha llegado al equipo.»
     }
 
     private void UpdateTaskbar()
@@ -142,8 +149,19 @@ public partial class MainWindow : Window
         if (!IsActive) NativeMethods.FlashTaskbar(new WindowInteropHelper(this).Handle);
     }
 
+    /// <summary>
+    /// El ViewModel pide cerrar (al terminar la operación tras pedir cerrar, o tras abrir el juego): una encuesta con
+    /// respuestas sin enviar pregunta antes «¿Salir sin enviarla?».
+    /// </summary>
     private void OnCloseRequested(object? sender, EventArgs e)
     {
+        if (!App.IsExiting && _vm.HasUnsentFeedback)
+        {
+            if (_closeFlowRunning) return;
+            _closeFlowRunning = true;
+            _ = HandleCloseRequestAsync(CloseDecision.ConfirmUnsentFeedback);
+            return;
+        }
         _forceClose = true;
         Close();
     }
@@ -177,12 +195,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Esc = botón secundario; Enter = primario (solo si no es peligroso y el foco no está en un botón). Las repeticiones
-    /// de tecla (Enter/Esc mantenidos) se ignoran para no aceptar o cancelar también el diálogo siguiente.
+    /// Esc = botón secundario; Enter = primario (solo si no es peligroso y el foco no está en un botón ni en un cuadro de
+    /// texto multilínea, donde Enter es un salto de línea). Las repeticiones de tecla (Enter/Esc mantenidos) se ignoran
+    /// para no aceptar o cancelar también el diálogo siguiente.
     /// </summary>
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (_vm.Dialogs.CurrentDialog is not IOverlayDialog dialog) return;
+        if (e.Key == Key.Enter && Keyboard.FocusedElement is TextBox { AcceptsReturn: true }) return;
 
         if (e.IsRepeat && e.Key is Key.Escape or Key.Enter)
         {
@@ -206,6 +226,10 @@ public partial class MainWindow : Window
 
     // ───────────── Cierre ─────────────
 
+    /// <summary>
+    /// X, Alt+F4 o la barra de tareas: puede preguntar (encuesta sin enviar, operación en curso). Sin preguntas si el
+    /// cierre es forzado o la aplicación ya se está cerrando (también cuando Windows cierra la sesión: App.IsExiting).
+    /// </summary>
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
@@ -233,6 +257,20 @@ public partial class MainWindow : Window
     {
         try
         {
+            if (decision == CloseDecision.ConfirmUnsentFeedback)
+            {
+                // La propia encuesta pregunta «¿Salir sin enviarla?»; con «Volver» la ventana sigue abierta.
+                if (!await _vm.ConfirmCloseWithUnsentFeedbackAsync()) return;
+                decision = _vm.GetCloseDecision(); // la encuesta ya se cerró: queda ver si hay una operación
+                if (decision == CloseDecision.ConfirmUnsentFeedback) return;
+                if (decision == CloseDecision.Allow)
+                {
+                    _forceClose = true;
+                    Close();
+                    return;
+                }
+            }
+
             if (decision == CloseDecision.MustWait)
             {
                 _vm.CloseWhenOperationEnds(); // el ViewModel pedirá cerrar al terminar

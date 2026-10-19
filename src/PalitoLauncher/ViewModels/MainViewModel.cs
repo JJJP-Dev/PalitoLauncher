@@ -7,6 +7,7 @@ using System.Windows.Shell;
 using System.Windows.Threading;
 using PalitoLauncher.Core;
 using PalitoLauncher.Core.Downloads;
+using PalitoLauncher.Core.Feedback;
 using PalitoLauncher.Core.GitHub;
 using PalitoLauncher.Core.Install;
 using PalitoLauncher.Core.Launch;
@@ -25,6 +26,7 @@ public enum AppPage
 {
     Home,
     Versions,
+    Roadmap,
     Settings,
 }
 
@@ -60,6 +62,12 @@ public enum CloseDecision
 
     /// <summary>Fase que no se puede interrumpir (instalando/limpiando): avisar y cerrar al terminar.</summary>
     MustWait,
+
+    /// <summary>
+    /// La encuesta está abierta con respuestas sin enviar: preguntar «¿Salir sin enviarla?»
+    /// (<see cref="MainViewModel.ConfirmCloseWithUnsentFeedbackAsync"/>) y después volver a decidir.
+    /// </summary>
+    ConfirmUnsentFeedback,
 }
 
 /// <summary>
@@ -90,6 +98,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private readonly GameProcessManager _process;
     private readonly SettingsStore _settingsStore;
     private readonly LauncherSelfUpdater _selfUpdater;
+    private readonly SurveyProvider? _surveyProvider;
+    private readonly FeedbackService? _feedback;
     private readonly DispatcherTimer _periodicTimer;
     private readonly DispatcherTimer _toastTimer;
     private readonly CancellationTokenSource _lifetimeCts = new();
@@ -143,6 +153,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private Func<Task>? _secondaryLinkAction;
     private Func<Task>? _tertiaryLinkAction;
     private Func<Task>? _noticeAction;
+    private Func<Task>? _noticeAction2;
     private bool _primaryEnabled;
 
     // ───────────── Propiedades de presentación ─────────────
@@ -156,6 +167,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     private string? _secondaryNoticeText;
     private NoticeKind _secondaryNoticeKind;
     private string? _secondaryNoticeActionText;
+    private string? _secondaryNoticeAction2Text;
     private bool _canDismissSecondaryNotice;
     private string _primaryButtonText = "CARGANDO…";
     private string? _primaryButtonGlyph;
@@ -192,6 +204,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _process = new GameProcessManager();
         _settingsStore = new SettingsStore(AppPaths.SettingsFile);
         _selfUpdater = new LauncherSelfUpdater(_github, new FileDownloader(http), AppPaths.CacheDir);
+        // Opiniones: si algo falla al crearlos, el launcher sigue funcionando sin ellas.
+        _surveyProvider = CreateSurveyProvider(_github);
+        _feedback = CreateFeedbackService();
 
         _process.GameStarted += OnGameStarted;
         _process.GameExited += OnGameExited;
@@ -210,6 +225,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         SecondaryLinkCommand = new RelayCommand(() => RunAction(_secondaryLinkAction, "Enlace secundario"), () => _secondaryLinkAction != null);
         TertiaryLinkCommand = new RelayCommand(() => RunAction(_tertiaryLinkAction, "Enlace terciario"), () => _tertiaryLinkAction != null);
         SecondaryNoticeActionCommand = new RelayCommand(() => RunAction(_noticeAction, "Acción del aviso"), () => _noticeAction != null);
+        SecondaryNoticeAction2Command = new RelayCommand(() => RunFlow(_noticeAction2 ?? (() => Task.CompletedTask), "Segunda acción del aviso"),
+            () => _noticeAction2 != null);
         DismissSecondaryNoticeCommand = new RelayCommand(DismissSecondaryNotice, () => CanDismissSecondaryNotice);
 
         OpenGameFolderCommand = new RelayCommand(OpenGameFolder, () => _installRoot != null && _installStatus?.State is InstallState.Installed or InstallState.Broken);
@@ -235,6 +252,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         CreateDesktopShortcutCommand = new AsyncRelayCommand(CreateDesktopShortcutAsync);
         OpenLogsFolderCommand = new RelayCommand(OpenLogsFolder);
         OpenLauncherGitHubCommand = new RelayCommand(() => ShellService.OpenUrl(LauncherConfig.LauncherRepoUrl));
+
+        // Roadmap.
+        RefreshRoadmapCommand = new AsyncRelayCommand(RefreshRoadmapManuallyAsync, () => !_roadmapLoading);
+        OpenRoadmapOnGitHubCommand = new RelayCommand(OpenRoadmapOnGitHub);
+        ShowRoadmapCommand = new RelayCommand(() => Navigate(AppPage.Roadmap));
+
+        // Opiniones.
+        SendFeedbackCommand = new RelayCommand(
+            () => RunFlow(() => OpenSurveyAsync(FeedbackTrigger.Manual, null, null, null), "Enviar opinión"), () => CanOpenSurvey);
+        OpenFeedbackFromPromptCommand = new RelayCommand(OpenFeedbackFromPrompt, _ => CanOpenSurvey);
+        DismissFeedbackPromptCommand = new RelayCommand(DismissFeedbackPrompt);
+        NeverAskFeedbackCommand = new RelayCommand(NeverAskFeedback);
+        RetryFeedbackSendCommand = new AsyncRelayCommand(RetryFeedbackSendAsync, () => !_flushRunning && _feedback != null);
 
         Settings = new SettingsViewModel(this);
 
@@ -287,6 +317,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             if (!SetProperty(ref _currentPage, value)) return;
             OnPropertyChanged(nameof(IsHomePage));
             OnPropertyChanged(nameof(IsVersionsPage));
+            OnPropertyChanged(nameof(IsRoadmapPage));
             OnPropertyChanged(nameof(IsSettingsPage));
         }
     }
@@ -350,6 +381,19 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     }
 
     public bool HasSecondaryNoticeAction => !string.IsNullOrWhiteSpace(_secondaryNoticeActionText);
+
+    /// <summary>Segunda acción del aviso (p.ej. «Contarnos qué pasó» en el aviso de cierre inesperado).</summary>
+    public string? SecondaryNoticeAction2Text
+    {
+        get => _secondaryNoticeAction2Text;
+        private set
+        {
+            if (SetProperty(ref _secondaryNoticeAction2Text, value)) OnPropertyChanged(nameof(HasSecondaryNoticeAction2));
+        }
+    }
+
+    public bool HasSecondaryNoticeAction2 => !string.IsNullOrWhiteSpace(_secondaryNoticeAction2Text);
+
     public bool CanDismissSecondaryNotice { get => _canDismissSecondaryNotice; private set => SetProperty(ref _canDismissSecondaryNotice, value); }
 
     public string PrimaryButtonText { get => _primaryButtonText; private set => SetProperty(ref _primaryButtonText, value); }
@@ -427,6 +471,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
     public ICommand SecondaryLinkCommand { get; }
     public ICommand TertiaryLinkCommand { get; }
     public ICommand SecondaryNoticeActionCommand { get; }
+    public ICommand SecondaryNoticeAction2Command { get; }
     public ICommand DismissSecondaryNoticeCommand { get; }
     public ICommand OpenGameFolderCommand { get; }
     public ICommand OpenInstallFolderCommand { get; }
@@ -502,7 +547,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         if (_currentPage == AppPage.Home) _newBadgeTag = null; // al salir de Inicio, "Nuevo" deja de mostrarse
         CurrentPage = page;
 
-        if (page == AppPage.Settings) Settings.RefreshInstallInfo(_installRoot, _installStatus);
+        if (page == AppPage.Settings)
+        {
+            Settings.RefreshInstallInfo(_installRoot, _installStatus);
+            RunFlow(RefreshPendingFeedbackAsync, "Opiniones pendientes", showErrors: false);
+        }
+        else if (page == AppPage.Roadmap)
+        {
+            RefreshRoadmapIfStale();
+        }
         UpdateState();
     }
 
@@ -852,6 +905,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         var kind = NoticeKind.Info;
         string? actionText = null;
         Func<Task>? action = null;
+        string? action2Text = null;
+        Func<Task>? action2 = null;
         bool dismissible = false;
 
         if (_crashNotice != null)
@@ -860,6 +915,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             kind = NoticeKind.Error;
             actionText = "Crear informe";
             action = CreateReportAsync;
+            // En vez de la invitación tras la partida: contar qué pasó con la encuesta.
+            action2Text = "Contarnos qué pasó";
+            action2 = TellWhatHappenedAsync;
             dismissible = true;
         }
         else if (_autoOperationError != null)
@@ -897,9 +955,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         }
 
         _noticeAction = action;
+        _noticeAction2 = action2;
         SecondaryNoticeKind = kind;
         SecondaryNoticeText = text;
         SecondaryNoticeActionText = action != null ? actionText : null;
+        SecondaryNoticeAction2Text = action2 != null ? action2Text : null;
         CanDismissSecondaryNotice = dismissible;
     }
 
@@ -1096,6 +1156,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         try
         {
             Settings.CommitLaunchArguments();
+            Settings.CommitFeedbackNickname();
             Task chain;
             lock (_saveLock) chain = _saveChain;
             if (!chain.Wait(TimeSpan.FromSeconds(3))) Log.Warn("Los ajustes tardaron demasiado en guardarse al cerrar.");

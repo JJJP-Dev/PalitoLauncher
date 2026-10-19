@@ -60,6 +60,11 @@ public sealed class GitHubClient
     private const string ImageAccept = "image/png, image/jpeg, image/*;q=0.8";
     private const int MaxApiBodyBytes = 16 * 1024 * 1024;
     private const int MaxFileBytes = 20 * 1024 * 1024;
+    private const string TextAccept = "text/plain, application/json;q=0.9, */*;q=0.8";
+    private const int MaxTextFileBytes = 256 * 1024;
+
+    /// <summary>Decodificador UTF-8 estricto: un archivo de texto con bytes inválidos se trata como dañado.</summary>
+    private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     internal static readonly TimeSpan NotFoundCacheDuration = TimeSpan.FromHours(1);
     private static readonly TimeSpan MaxResetDelay = TimeSpan.FromHours(2);
@@ -212,6 +217,87 @@ public sealed class GitHubClient
     }
 
     /// <summary>
+    /// GET /repos/{owner}/{repo}/milestones?state=all&amp;per_page=100 (roadmap). Misma caché por URL, ETag, rate limit
+    /// compartido y fusión de peticiones que <see cref="GetReleasesAsync"/>, pero con ventana de frescura
+    /// LauncherConfig.MilestonesFreshnessWindow (el progreso cambia despacio y así se ahorra cupo), salvo
+    /// <paramref name="bypassFreshness"/>. Devuelve los milestones ordenados por número. Error de red / rate limit / 404 /
+    /// JSON inválido → caché como OfflineCache con Warning si existe; si no, null (NUNCA lanza salvo
+    /// OperationCanceledException si se canceló <paramref name="ct"/>): el roadmap es informativo y no debe molestar.
+    /// </summary>
+    public Task<MilestoneFetchResult?> GetMilestonesAsync(string owner, string repo, CancellationToken ct, bool bypassFreshness = false)
+    {
+        if (ct.IsCancellationRequested) return Task.FromCanceled<MilestoneFetchResult?>(ct);
+        if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repo))
+        {
+            Log.Warn("GetMilestonesAsync: falta el propietario o el nombre del repositorio.");
+            return Task.FromResult<MilestoneFetchResult?>(null);
+        }
+
+        owner = owner.Trim();
+        repo = repo.Trim();
+        var url = $"{ApiBaseUrl}/repos/{Uri.EscapeDataString(owner)}/{Uri.EscapeDataString(repo)}/milestones?state=all&per_page=100";
+        var key = (bypassFreshness ? "milestones-bypass|" : "milestones|") + url;
+        return JoinAsync(key, () => FetchMilestonesAsync(url, $"{owner}/{repo}", bypassFreshness), ct);
+    }
+
+    /// <summary>
+    /// Igual que <see cref="GetCachedFileAsync"/> pero para un archivo de texto pequeño (máx. 256 KB, p.ej.
+    /// launcher/feedback.json en raw.githubusercontent.com): 200 → solo se acepta si <paramref name="validate"/>(texto)
+    /// devuelve true (si no, se conserva la caché anterior); 304 → caché; 404 → borra la caché y devuelve null; error de red
+    /// → caché si existe, si no null. Devuelve el TEXTO (UTF-8), no la ruta. Escritura atómica, ETag en un .meta.json.
+    /// Nunca lanza salvo OperationCanceledException si se canceló <paramref name="ct"/>.
+    /// </summary>
+    /// <remarks>
+    /// El texto en caché también se valida al leerlo (UTF-8 válido, tamaño y <paramref name="validate"/>): si ya no pasa, se
+    /// borra y se pide de nuevo sin If-None-Match. Si <paramref name="validate"/> lanza, cuenta como "no válido". Con
+    /// llamadas simultáneas al mismo archivo se usa el <paramref name="validate"/> de la primera.
+    /// </remarks>
+    public Task<string?> GetCachedTextFileAsync(string url, string cacheFileName, Func<string, bool> validate, CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested) return Task.FromCanceled<string?>(ct);
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        {
+            Log.Warn($"GetCachedTextFileAsync: URL no válida \"{url}\".");
+            return Task.FromResult<string?>(null);
+        }
+        if (!IsPlainFileName(cacheFileName))
+        {
+            Log.Warn($"GetCachedTextFileAsync: nombre de archivo de caché no válido \"{cacheFileName}\".");
+            return Task.FromResult<string?>(null);
+        }
+        if (validate is null)
+        {
+            Log.Warn("GetCachedTextFileAsync: falta la función de validación.");
+            return Task.FromResult<string?>(null);
+        }
+
+        var key = "text|" + cacheFileName.ToLowerInvariant() + "|" + url;
+        return JoinAsync(key, () => FetchTextFileAsync(url, cacheFileName, validate), ct);
+    }
+
+    /// <summary>Convierte el JSON de /milestones (array) a modelos, tolerante a campos null/ausentes. Expuesto para tests.</summary>
+    /// <remarks>
+    /// Mapea number, title, description, state ("closed" → IsClosed), open_issues, closed_issues, due_on, closed_at,
+    /// updated_at y html_url. Ignora elementos que no son objetos. Devuelve la lista ordenada por número (orden estable).
+    /// Lanza JsonException si no es JSON o no es un array.
+    /// </remarks>
+    internal static IReadOnlyList<MilestoneInfo> ParseMilestones(string json)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        using var doc = JsonDocument.Parse(StripBom(json));
+        if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            throw new JsonException("Se esperaba un array de milestones.");
+
+        var list = new List<MilestoneInfo>();
+        foreach (var element in doc.RootElement.EnumerateArray())
+        {
+            if (element.ValueKind == JsonValueKind.Object)
+                list.Add(ParseMilestoneElement(element));
+        }
+        return list.OrderBy(m => m.Number).ToList().AsReadOnly();
+    }
+
+    /// <summary>
     /// Convierte el JSON de la API (array de releases) a modelos. Expuesto para tests. Tolerante a campos null/ausentes.
     /// Mapea: id, tag_name, name, body, draft, prerelease, published_at, html_url y assets[] (id, name, size,
     /// browser_download_url, content_type, updated_at, digest "sha256:HEX" → Sha256 en minúsculas).
@@ -335,6 +421,103 @@ public sealed class GitHubClient
         if (failure.Kind == FailureKind.RateLimit && failure.ResetUtc is { } reset)
             throw new GitHubRateLimitException(failure.Message, reset);
         throw new LauncherException(failure.Message, failure.InnerException);
+    }
+
+    // ───────────────────────────── Milestones (roadmap) ─────────────────────────────
+
+    /// <summary>Como <see cref="FetchReleasesAsync"/>, con ventana de frescura propia y null en vez de excepciones.</summary>
+    private async Task<MilestoneFetchResult?> FetchMilestonesAsync(string url, string repoDisplay, bool bypassFreshness)
+    {
+        CacheEntry? cache = null;
+        IReadOnlyList<MilestoneInfo>? cached = null;
+        try
+        {
+            cache = ReadCache(url);
+            if (cache is { Status: 200, Body: not null })
+            {
+                try
+                {
+                    cached = ParseMilestones(cache.Body);
+                }
+                catch (JsonException ex)
+                {
+                    Log.Warn($"Caché de milestones corrupta, se descarta: {url}", ex);
+                    DeleteCache(url);
+                }
+            }
+            if (cached is null) cache = null;
+
+            if (!bypassFreshness && cache is not null && cached is not null
+                && IsFresh(cache.FetchedAtUtc, LauncherConfig.MilestonesFreshnessWindow))
+            {
+                return new MilestoneFetchResult { Milestones = cached, Source = ReleaseFetchSource.NotModifiedCache, FetchedAt = cache.FetchedAtUtc };
+            }
+
+            var response = await SendApiAsync(url, cache?.ETag, cache?.LastModified).ConfigureAwait(false);
+            switch (response.Kind)
+            {
+                case ApiResponseKind.Ok:
+                {
+                    IReadOnlyList<MilestoneInfo> milestones;
+                    try
+                    {
+                        milestones = ParseMilestones(response.Body!);
+                    }
+                    catch (JsonException ex)
+                    {
+                        throw FetchFailure.InvalidResponse(ex);
+                    }
+
+                    var fetchedAt = UtcNow();
+                    WriteCache(new CacheEntry
+                    {
+                        Url = url, Status = 200, ETag = response.ETag, LastModified = response.LastModified,
+                        FetchedAtUtc = fetchedAt, Body = response.Body,
+                    });
+                    return new MilestoneFetchResult { Milestones = milestones, Source = ReleaseFetchSource.Network, FetchedAt = fetchedAt };
+                }
+
+                case ApiResponseKind.NotModified when cache is not null && cached is not null:
+                {
+                    var fetchedAt = UtcNow();
+                    TouchCache(cache, response, fetchedAt);
+                    return new MilestoneFetchResult { Milestones = cached, Source = ReleaseFetchSource.NotModifiedCache, FetchedAt = fetchedAt };
+                }
+
+                case ApiResponseKind.NotFound:
+                    throw FetchFailure.NotFound(repoDisplay);
+
+                default:
+                    throw FetchFailure.InvalidResponse(null);
+            }
+        }
+        catch (FetchFailure failure)
+        {
+            return MilestonesOfflineOrNull(failure, cache, cached, url);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Error inesperado al consultar los milestones de GitHub ({url}).", ex);
+            return MilestonesOfflineOrNull(FetchFailure.Unexpected(ex), cache, cached, url);
+        }
+    }
+
+    private static MilestoneFetchResult? MilestonesOfflineOrNull(FetchFailure failure, CacheEntry? cache,
+        IReadOnlyList<MilestoneInfo>? cached, string url)
+    {
+        if (cache is not null && cached is not null)
+        {
+            Log.Warn($"GitHub no disponible ({failure.Message}); se usan los milestones guardados de {cache.FetchedAtUtc:u}: {url}",
+                failure.InnerException);
+            return new MilestoneFetchResult
+            {
+                Milestones = cached, Source = ReleaseFetchSource.OfflineCache, FetchedAt = cache.FetchedAtUtc, Warning = failure.CacheWarning,
+            };
+        }
+
+        // El roadmap es informativo: sin datos se devuelve null y la UI lo muestra sin diálogos.
+        Log.Warn($"No se pudieron obtener los milestones y no hay caché: {failure.Message} ({url})", failure.InnerException);
+        return null;
     }
 
     // ───────────────────────────── Última release ─────────────────────────────
@@ -517,6 +700,151 @@ public sealed class GitHubClient
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Log.Warn($"No se pudo leer la imagen en caché: {path}", ex);
+            return false;
+        }
+    }
+
+    // ───────────────────────────── Archivos de texto (encuesta) ─────────────────────────────
+
+    private async Task<string?> FetchTextFileAsync(string url, string cacheFileName, Func<string, bool> validate)
+    {
+        var path = Path.Combine(_cacheDir, cacheFileName);
+        var metaPath = path + ".meta.json";
+        string? cached = null;
+        try
+        {
+            cached = ReadValidCachedText(path, metaPath, validate);
+            var meta = cached is not null ? ReadFileMeta(metaPath) : null;
+            var sameUrl = meta is not null && string.Equals(meta.Url, url, StringComparison.Ordinal);
+            var etag = sameUrl ? meta!.ETag : null;
+            var lastModified = sameUrl ? meta!.LastModified : null;
+
+            for (var attempt = 0; attempt < 2; attempt++)
+            {
+                var sentValidators = etag is not null || lastModified is not null;
+                var raw = await SendOnceAsync(url, isApi: false, TextAccept, etag, lastModified, noCache: attempt > 0,
+                    RequestTimeout, MaxTextFileBytes).ConfigureAwait(false);
+
+                switch (raw.Status)
+                {
+                    case 200:
+                    {
+                        var text = DecodeText(raw.Body);
+                        if (text is null || !IsValidText(validate, text, url))
+                        {
+                            Log.Warn($"El archivo de texto descargado no es válido (Content-Type: {raw.ContentType ?? "?"}); " +
+                                     $"se conserva la caché: {url}");
+                            return cached;
+                        }
+
+                        try
+                        {
+                            await WriteAllBytesAtomicAsync(path, raw.Body!).ConfigureAwait(false);
+                            WriteFileMeta(metaPath, new FileMeta
+                            {
+                                Url = url, ETag = raw.ETag, LastModified = raw.LastModified, FetchedAtUtc = UtcNow(),
+                            });
+                        }
+                        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                        {
+                            // Sin caché nueva se usa igualmente lo descargado; la próxima vez se vuelve a pedir entero.
+                            Log.Warn($"No se pudo guardar en caché {path}.", ex);
+                        }
+                        return text;
+                    }
+
+                    case 304:
+                        if (sentValidators && cached is not null) return cached;
+                        // 304 sin haber enviado validadores (o sin caché legible): se repite una vez sin ellos.
+                        etag = null;
+                        lastModified = null;
+                        continue;
+
+                    case 404:
+                    case 410:
+                        Log.Info($"El archivo remoto ya no existe ({raw.Status}); se borra la caché: {url}");
+                        FileSystemUtil.TryDeleteFile(path);
+                        FileSystemUtil.TryDeleteFile(metaPath);
+                        return null;
+
+                    default:
+                        Log.Warn($"No se pudo descargar {url} (código {raw.Status}).");
+                        return cached;
+                }
+            }
+
+            Log.Warn($"Respuesta 304 inesperada sin validadores para {url}.");
+            return cached;
+        }
+        catch (FetchFailure failure)
+        {
+            Log.Warn($"No se pudo descargar {url}: {failure.Message}", failure.InnerException);
+            return cached;
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Error inesperado al descargar {url}.", ex);
+            return cached;
+        }
+    }
+
+    /// <summary>
+    /// Texto en caché si existe, no pasa de <see cref="MaxTextFileBytes"/>, es UTF-8 válido y pasa <paramref name="validate"/>.
+    /// Si existe pero no es válido, lo borra (con sus metadatos) para no mandar un ETag que devolvería un 304 inservible.
+    /// </summary>
+    private static string? ReadValidCachedText(string path, string metaPath, Func<string, bool> validate)
+    {
+        byte[]? data = null;
+        try
+        {
+            if (!File.Exists(path)) return null;
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (fs.Length <= MaxTextFileBytes)
+            {
+                data = new byte[fs.Length];
+                fs.ReadExactly(data);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.Warn($"No se pudo leer el archivo de texto en caché: {path}", ex);
+            return null;
+        }
+
+        var text = DecodeText(data);
+        if (text is not null && IsValidText(validate, text, path)) return text;
+
+        Log.Warn($"Archivo de texto en caché dañado o no válido, se borra: {path}");
+        FileSystemUtil.TryDeleteFile(path);
+        FileSystemUtil.TryDeleteFile(metaPath);
+        return null;
+    }
+
+    /// <summary>UTF-8 estricto (sin BOM) o null si los bytes no son texto UTF-8.</summary>
+    private static string? DecodeText(byte[]? data)
+    {
+        if (data is null) return null;
+        try
+        {
+            return StripBom(StrictUtf8.GetString(data));
+        }
+        catch (ArgumentException)
+        {
+            // DecoderFallbackException: bytes que no son UTF-8.
+            return null;
+        }
+    }
+
+    /// <summary>Ejecuta la validación del llamador; si lanza, el texto cuenta como no válido.</summary>
+    private static bool IsValidText(Func<string, bool> validate, string text, string source)
+    {
+        try
+        {
+            return validate(text);
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"La validación del archivo de texto lanzó una excepción; se trata como no válido: {source}", ex);
             return false;
         }
     }
@@ -889,10 +1217,12 @@ public sealed class GitHubClient
 
     // ───────────────────────────── Caché ─────────────────────────────
 
-    private bool IsFresh(DateTimeOffset fetchedAtUtc)
+    private bool IsFresh(DateTimeOffset fetchedAtUtc) => IsFresh(fetchedAtUtc, LauncherConfig.ApiFreshnessWindow);
+
+    private bool IsFresh(DateTimeOffset fetchedAtUtc, TimeSpan window)
     {
         var age = UtcNow() - fetchedAtUtc;
-        return age >= TimeSpan.Zero && age < LauncherConfig.ApiFreshnessWindow;
+        return age >= TimeSpan.Zero && age < window;
     }
 
     private string GetCachePath(string url)
@@ -1067,6 +1397,23 @@ public sealed class GitHubClient
             Assets = assets.AsReadOnly(),
         };
     }
+
+    private static MilestoneInfo ParseMilestoneElement(JsonElement element) => new()
+    {
+        Number = ToInt(GetLong(element, "number")),
+        Title = GetString(element, "title") ?? "",
+        Description = GetString(element, "description"),
+        IsClosed = string.Equals(GetString(element, "state"), "closed", StringComparison.OrdinalIgnoreCase),
+        OpenIssues = Math.Max(0, ToInt(GetLong(element, "open_issues"))),
+        ClosedIssues = Math.Max(0, ToInt(GetLong(element, "closed_issues"))),
+        DueOn = GetDate(element, "due_on"),
+        ClosedAt = GetDate(element, "closed_at"),
+        UpdatedAt = GetDate(element, "updated_at"),
+        HtmlUrl = GetString(element, "html_url") ?? "",
+    };
+
+    private static int ToInt(long? value)
+        => value is { } v ? (int)Math.Clamp(v, int.MinValue, int.MaxValue) : 0;
 
     private static string? ParseSha256Digest(string? digest)
     {

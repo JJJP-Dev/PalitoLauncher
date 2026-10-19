@@ -1,5 +1,7 @@
 using System.Runtime.CompilerServices;
+using PalitoLauncher.Core.Feedback;
 using PalitoLauncher.Core.GitHub;
+using PalitoLauncher.Core.Install;
 using PalitoLauncher.ViewModels;
 
 namespace PalitoLauncher.UI.Tests.TestHelpers;
@@ -24,6 +26,53 @@ internal static class MainViewModelAccess
 
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "AfterReleasesChangedAsync")]
     public static extern Task AfterReleasesChangedAsync(MainViewModel vm);
+
+    /// <summary>Encuesta ya cargada (así los tests no esperan a la remota).</summary>
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_survey")]
+    public static extern ref SurveyDefinition? Survey(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_crashNotice")]
+    public static extern ref string? CrashNotice(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "UpdateState")]
+    public static extern void UpdateState(MainViewModel vm);
+
+    // ───────────── Partida (sin juego real) ─────────────
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_installStatus")]
+    public static extern ref InstallStatus? InstallStatus(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_gameSessionStartUtc")]
+    public static extern ref DateTimeOffset? GameSessionStartUtc(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_suppressNextCrashNotice")]
+    public static extern ref bool SuppressNextCrashNotice(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_operationKind")]
+    public static extern ref OperationKind OperationKind(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "MarkGameSessionStarted")]
+    public static extern void MarkGameSessionStarted(MainViewModel vm, bool restart);
+
+    /// <summary>Lo que hace el launcher cuando el proceso del juego termina (sin carpeta de instalación no toca el disco).</summary>
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "HandleGameExitedAsync")]
+    public static extern Task HandleGameExitedAsync(MainViewModel vm, int exitCode);
+
+    /// <summary>Simula una partida de <paramref name="minutes"/> minutos con <paramref name="version"/> instalada.</summary>
+    public static void StartSession(MainViewModel vm, string version, string display, int minutes)
+    {
+        InstallStatus(vm) = Installed(version, display);
+        MarkGameSessionStarted(vm, restart: true);
+        GameSessionStartUtc(vm) = DateTimeOffset.UtcNow.AddMinutes(-minutes);
+    }
+
+    public static InstallStatus Installed(string version, string display) => new()
+    {
+        State = InstallState.Installed,
+        InstallRoot = @"C:\Juegos\Coop2D",
+        GameDir = @"C:\Juegos\Coop2D\game",
+        Info = new InstalledGameInfo { Tag = "v" + version, Version = version, VersionDisplay = display, AssetName = "Coop2D.zip" },
+    };
 
     /// <summary>
     /// Simula una consulta a GitHub ya aplicada: <paramref name="all"/> es lo descargado y <paramref name="visible"/> la

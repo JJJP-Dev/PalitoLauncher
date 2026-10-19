@@ -218,7 +218,8 @@ public sealed class LauncherSelfUpdater
 
     /// <summary>
     /// Consulta la última release del repo del launcher, como mucho una vez cada LauncherConfig.LauncherUpdateCheckInterval
-    /// (marca de tiempo en &lt;cacheDir&gt;\launcher-update-check.json; <paramref name="force"/> la ignora) y nunca si
+    /// (marca de tiempo en &lt;cacheDir&gt;\launcher-update-check.json; <paramref name="force"/> la ignora, igual que la caché de
+    /// GitHubClient: 404 cacheado y ventana de frescura) y nunca si
     /// github.RateLimitRemaining &lt;= LauncherConfig.RateLimitReserveForUser (salvo force). Devuelve info si la versión del
     /// tag es MAYOR que CurrentVersion y hay un asset que coincide con LauncherConfig.LauncherAssetPattern; si no, null.
     /// Cuando no consulta por el intervalo, devuelve el último resultado positivo guardado si sigue siendo mayor que la
@@ -251,7 +252,10 @@ public sealed class LauncherSelfUpdater
                 }
             }
 
-            var latest = await _github.GetLatestReleaseAsync(LauncherConfig.LauncherRepoOwner, LauncherConfig.LauncherRepoName, ct)
+            // Con force (botón "Buscar ahora") se ignora también la caché de GitHubClient (404 cacheado, frescura de 60 s):
+            // si no, una release recién publicada no se veía hasta que caducaba esa caché.
+            var latest = await _github.GetLatestReleaseAsync(LauncherConfig.LauncherRepoOwner, LauncherConfig.LauncherRepoName, ct,
+                    bypassCache: force)
                 .ConfigureAwait(false);
 
             if (latest == null)

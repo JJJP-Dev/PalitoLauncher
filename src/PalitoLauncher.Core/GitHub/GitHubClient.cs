@@ -61,7 +61,7 @@ public sealed class GitHubClient
     private const int MaxApiBodyBytes = 16 * 1024 * 1024;
     private const int MaxFileBytes = 20 * 1024 * 1024;
 
-    private static readonly TimeSpan NotFoundCacheDuration = TimeSpan.FromHours(6);
+    internal static readonly TimeSpan NotFoundCacheDuration = TimeSpan.FromHours(1);
     private static readonly TimeSpan MaxResetDelay = TimeSpan.FromHours(2);
     private static readonly TimeSpan DefaultRateWindow = TimeSpan.FromHours(1);
     private static readonly TimeSpan DefaultSecondaryWait = TimeSpan.FromSeconds(60);
@@ -167,10 +167,12 @@ public sealed class GitHubClient
 
     /// <summary>
     /// GET /repos/{owner}/{repo}/releases/latest con la misma caché. Un 404 (repo inexistente/privado o sin releases) se
-    /// cachea 6 h: durante ese tiempo devuelve null sin preguntar. Cualquier error o rate limit → null (registrado).
+    /// cachea 1 h: durante ese tiempo devuelve null sin preguntar. Cualquier error o rate limit → null (registrado).
+    /// Con <paramref name="bypassCache"/> (comprobación pedida por el usuario) se ignoran el 404 cacheado y la ventana de
+    /// frescura y siempre se pregunta a GitHub (con If-None-Match si hay una release válida en caché).
     /// Pensado para la auto-actualización del launcher (best-effort). Solo lanza OperationCanceledException si se canceló <paramref name="ct"/>.
     /// </summary>
-    public Task<ReleaseInfo?> GetLatestReleaseAsync(string owner, string repo, CancellationToken ct)
+    public Task<ReleaseInfo?> GetLatestReleaseAsync(string owner, string repo, CancellationToken ct, bool bypassCache = false)
     {
         if (ct.IsCancellationRequested) return Task.FromCanceled<ReleaseInfo?>(ct);
         if (string.IsNullOrWhiteSpace(owner) || string.IsNullOrWhiteSpace(repo))
@@ -180,7 +182,8 @@ public sealed class GitHubClient
         }
 
         var url = $"{ApiBaseUrl}/repos/{Uri.EscapeDataString(owner.Trim())}/{Uri.EscapeDataString(repo.Trim())}/releases/latest";
-        return JoinAsync("latest|" + url, () => FetchLatestAsync(url), ct);
+        var key = (bypassCache ? "latest-bypass|" : "latest|") + url;
+        return JoinAsync(key, () => FetchLatestAsync(url, bypassCache), ct);
     }
 
     /// <summary>
@@ -336,7 +339,7 @@ public sealed class GitHubClient
 
     // ───────────────────────────── Última release ─────────────────────────────
 
-    private async Task<ReleaseInfo?> FetchLatestAsync(string url)
+    private async Task<ReleaseInfo?> FetchLatestAsync(string url, bool bypassCache)
     {
         try
         {
@@ -346,7 +349,7 @@ public sealed class GitHubClient
             if (cache is { Status: 404 })
             {
                 var age = UtcNow() - cache.FetchedAtUtc;
-                if (age >= TimeSpan.Zero && age < NotFoundCacheDuration)
+                if (!bypassCache && age >= TimeSpan.Zero && age < NotFoundCacheDuration)
                     return null; // 404 reciente: no se vuelve a preguntar
                 cache = null;
             }
@@ -362,7 +365,7 @@ public sealed class GitHubClient
                     DeleteCache(url);
                 }
                 if (cached is null) cache = null;
-                else if (IsFresh(cache!.FetchedAtUtc)) return cached;
+                else if (!bypassCache && IsFresh(cache!.FetchedAtUtc)) return cached;
             }
             else
             {
@@ -396,7 +399,7 @@ public sealed class GitHubClient
                     return cached;
 
                 case ApiResponseKind.NotFound:
-                    Log.Info($"GitHub: 404 en {url} (sin releases o repositorio privado); no se vuelve a preguntar en 6 h.");
+                    Log.Info($"GitHub: 404 en {url} (sin releases o repositorio privado); no se vuelve a preguntar en {NotFoundCacheDuration.TotalHours:0} h salvo comprobación manual.");
                     WriteCache(new CacheEntry { Url = url, Status = 404, FetchedAtUtc = UtcNow() });
                     return null;
 

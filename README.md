@@ -162,7 +162,8 @@ workflow** indicando la versión.
 
 - El asset debe llamarse **exactamente `PalitoLauncher.exe`**: es lo que busca la auto-actualización
   (`LauncherConfig.LauncherAssetPattern`). El workflow lo comprueba.
-- Los launchers instalados consultan la última release **como mucho cada 12 h** y muestran un aviso
+- Los launchers instalados consultan la última release **al arrancar y cada hora, como mucho una vez cada 2 h** (o al
+  momento con **Ajustes → Buscar ahora**) y muestran un aviso
   («Nueva versión del launcher…») con Actualizar / Ver cambios / Omitir.
 - Un tag con sufijo (`v1.1.0-beta.1`) se publica como **pre-release** y no llega a nadie automáticamente
   (`/releases/latest` ignora las pre-releases): útil para probar.
@@ -240,7 +241,7 @@ El cupo lo comparten todos los PCs detrás de la misma IP (amigos en la misma ca
 - guarda las releases en caché y funciona sin conexión con esos datos.
 
 Descargar las builds (CDN de GitHub) y el fondo (raw.githubusercontent.com) no gasta cupo de la API. Un arranque normal
-gasta 1 petición (más 1 cada 12 h para buscar versión nueva del launcher).
+gasta 1 petición (más 1, como mucho cada 2 h, para buscar versión nueva del launcher).
 
 ### Solución de problemas
 

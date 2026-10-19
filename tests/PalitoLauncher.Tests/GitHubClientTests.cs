@@ -890,7 +890,7 @@ public sealed class GitHubClientTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLatestRelease_404_IsCachedForSixHours()
+    public async Task GetLatestRelease_404_IsCachedForOneHour()
     {
         var handler = new FakeHttpHandler(_ => GitHubResponses.Status(HttpStatusCode.NotFound));
         var client = CreateClient(handler);
@@ -898,13 +898,51 @@ public sealed class GitHubClientTests : IDisposable
         Assert.Null(await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None));
         Assert.Equal(1, handler.RequestCount);
 
-        _clock.Advance(TimeSpan.FromHours(5));
+        _clock.Advance(TimeSpan.FromMinutes(50));
         Assert.Null(await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None));
         Assert.Equal(1, handler.RequestCount);
 
-        _clock.Advance(TimeSpan.FromHours(1.1));
+        _clock.Advance(TimeSpan.FromMinutes(15));
         Assert.Null(await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None));
         Assert.Equal(2, handler.RequestCount);
+    }
+
+    // Regresión: el repo del launcher no existía (404 cacheado) y después se publicó una release; la comprobación manual
+    // debe verla al momento en vez de esperar a que caduque el 404.
+    [Fact]
+    public async Task GetLatestRelease_Bypass_IgnoresCached404()
+    {
+        var handler = FakeHttpHandler.Sequence(
+            _ => GitHubResponses.Status(HttpStatusCode.NotFound),
+            _ => GitHubResponses.Json(LatestJson, etag: "\"l1\""));
+        var client = CreateClient(handler);
+
+        Assert.Null(await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None));
+        _clock.Advance(TimeSpan.FromMinutes(1));
+        Assert.Null(await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None));
+        Assert.Equal(1, handler.RequestCount);
+
+        var release = await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None, bypassCache: true);
+        Assert.Equal("v1.1.0", release?.TagName);
+        Assert.Equal(2, handler.RequestCount);
+
+        // Lo nuevo queda en caché para las consultas normales.
+        Assert.Equal("v1.1.0", (await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None))?.TagName);
+        Assert.Equal(2, handler.RequestCount);
+    }
+
+    [Fact]
+    public async Task GetLatestRelease_Bypass_IgnoresFreshnessButRevalidatesWithETag()
+    {
+        var handler = FakeHttpHandler.Sequence(_ => GitHubResponses.Json(LatestJson, etag: "\"l1\""), _ => GitHubResponses.NotModified());
+        var client = CreateClient(handler);
+
+        Assert.NotNull(await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None));
+        var again = await client.GetLatestReleaseAsync("JJJP-Dev", "PalitoLauncher", CancellationToken.None, bypassCache: true);
+
+        Assert.Equal("v1.1.0", again?.TagName);
+        Assert.Equal(2, handler.RequestCount);
+        Assert.Equal("\"l1\"", handler.Requests[1].IfNoneMatch);
     }
 
     [Fact]

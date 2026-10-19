@@ -60,8 +60,11 @@ public static class LauncherConfig
     /// <summary>Respuestas de la API más recientes que esto se reutilizan sin volver a preguntar (GitHub manda max-age=60).</summary>
     public static readonly TimeSpan ApiFreshnessWindow = TimeSpan.FromSeconds(60);
 
-    /// <summary>Cada cuánto, como mucho, se consulta si hay versión nueva del launcher.</summary>
-    public static readonly TimeSpan LauncherUpdateCheckInterval = TimeSpan.FromHours(12);
+    /// <summary>
+    /// Cada cuánto, como mucho, se consulta automáticamente si hay versión nueva del launcher (al arrancar y en la comprobación
+    /// periódica). "Buscar ahora" en Ajustes consulta siempre. Cuesta 1 petición a la API por consulta.
+    /// </summary>
+    public static readonly TimeSpan LauncherUpdateCheckInterval = TimeSpan.FromHours(2);
 
     /// <summary>Si quedan estas peticiones o menos, las comprobaciones automáticas se saltan (se reservan para acciones del usuario).</summary>
     public const int RateLimitReserveForUser = 10;

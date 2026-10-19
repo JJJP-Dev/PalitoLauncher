@@ -248,6 +248,46 @@ public class LauncherSelfUpdaterTests
         Assert.Equal(1, h5.CountRequests(LatestPath));
     }
 
+    // Regresión (v1.0.0): el repo del launcher aún no existía → GitHubClient cacheó el 404; después se publicó una versión
+    // nueva y ni el arranque ni "Buscar ahora" la veían hasta que caducaba ese 404.
+    [Fact]
+    public async Task CheckAsync_Forced_SeesReleasePublishedAfterCached404()
+    {
+        using var tmp = new TempDir();
+        var gh = tmp.Combine("gh");
+        var cache = tmp.Combine("cache");
+
+        var missing = LatestHandler(null);
+        Assert.Null(await CreateUpdater(missing, gh, cache).CheckAsync(CancellationToken.None));
+        Assert.Equal(1, missing.CountRequests(LatestPath));
+
+        var published = LatestHandler(ReleaseJson("v9.0.0"));
+        Assert.Null(await CreateUpdater(published, gh, cache).CheckAsync(CancellationToken.None)); // 404 aún en caché
+        Assert.Equal(0, published.CountRequests(LatestPath));
+
+        var info = await CreateUpdater(published, gh, cache).CheckAsync(CancellationToken.None, force: true);
+        Assert.Equal("9.0.0", info?.VersionText);
+        Assert.Equal(1, published.CountRequests(LatestPath));
+    }
+
+    // Regresión: "al día" y, segundos después, se publica otra versión → "Buscar ahora" no debe quedarse con la respuesta
+    // de la ventana de frescura de 60 s.
+    [Fact]
+    public async Task CheckAsync_Forced_IgnoresFreshResponseFromJustBefore()
+    {
+        using var tmp = new TempDir();
+        var gh = tmp.Combine("gh");
+        var cache = tmp.Combine("cache");
+
+        var old = LatestHandler(ReleaseJson("v1.0.0"));
+        Assert.Null(await CreateUpdater(old, gh, cache).CheckAsync(CancellationToken.None));
+
+        var newer = LatestHandler(ReleaseJson("v1.0.1"));
+        var info = await CreateUpdater(newer, gh, cache).CheckAsync(CancellationToken.None, force: true);
+        Assert.Equal("1.0.1", info?.VersionText);
+        Assert.Equal(1, newer.CountRequests(LatestPath));
+    }
+
     [Fact]
     public async Task CheckAsync_LowRateLimit_SkipsUnlessForced()
     {

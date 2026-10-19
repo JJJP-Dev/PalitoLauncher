@@ -410,7 +410,11 @@ public static class MarkdownRenderer
 
         // ───────────── En línea ─────────────
 
-        private void AddInlines(InlineCollection target, string text, int depth)
+        /// <param name="inLink">
+        /// Dentro de la etiqueta de un enlace: WPF no admite un Hyperlink dentro de otro (lanzaría y se perderían todas las
+        /// notas), así que los enlaces anidados se muestran solo como texto.
+        /// </param>
+        private void AddInlines(InlineCollection target, string text, int depth, bool inLink = false)
         {
             if (string.IsNullOrEmpty(text)) return;
             if (depth > MaxInlineDepth)
@@ -479,7 +483,7 @@ public static class MarkdownRenderer
                     {
                         Flush();
                         var bold = new Bold();
-                        AddInlines(bold.Inlines, text.Substring(i + 2, end - i - 2), depth + 1);
+                        AddInlines(bold.Inlines, text.Substring(i + 2, end - i - 2), depth + 1, inLink);
                         target.Add(bold);
                         i = end + 2;
                         continue;
@@ -495,7 +499,7 @@ public static class MarkdownRenderer
                     {
                         Flush();
                         var italic = new Italic();
-                        AddInlines(italic.Inlines, text.Substring(i + 1, end - i - 1), depth + 1);
+                        AddInlines(italic.Inlines, text.Substring(i + 1, end - i - 1), depth + 1, inLink);
                         target.Add(italic);
                         i = end + 1;
                         continue;
@@ -514,7 +518,7 @@ public static class MarkdownRenderer
                     {
                         Flush();
                         var span = new Span { TextDecorations = TextDecorations.Strikethrough };
-                        AddInlines(span.Inlines, text.Substring(i + 2, end - i - 2), depth + 1);
+                        AddInlines(span.Inlines, text.Substring(i + 2, end - i - 2), depth + 1, inLink);
                         target.Add(span);
                         i = end + 2;
                         continue;
@@ -528,7 +532,9 @@ public static class MarkdownRenderer
                     if (TryParseLink(text, start, ref linkBudget, out var label, out var url, out var next))
                     {
                         Flush();
-                        AddLink(target, string.IsNullOrWhiteSpace(label) ? url : label, url, depth);
+                        // Sin texto: se muestra la URL tal cual (no es Markdown).
+                        if (string.IsNullOrWhiteSpace(label)) AddLink(target, url, url, depth, inLink, parseLabel: false);
+                        else AddLink(target, label, url, depth, inLink);
                         i = next;
                         continue;
                     }
@@ -546,7 +552,7 @@ public static class MarkdownRenderer
                         if (ShellService.IsWebUrl(inner) && !inner.Contains(' '))
                         {
                             Flush();
-                            AddLink(target, inner, inner, depth, parseLabel: false);
+                            AddLink(target, inner, inner, depth, inLink, parseLabel: false);
                             i = end + 1;
                             continue;
                         }
@@ -565,7 +571,7 @@ public static class MarkdownRenderer
                     if (ShellService.IsWebUrl(url))
                     {
                         Flush();
-                        AddLink(target, url, url, depth, parseLabel: false);
+                        AddLink(target, url, url, depth, inLink, parseLabel: false);
                         i = end;
                         continue;
                     }
@@ -577,13 +583,13 @@ public static class MarkdownRenderer
             Flush();
         }
 
-        private void AddLink(InlineCollection target, string label, string url, int depth, bool parseLabel = true)
+        private void AddLink(InlineCollection target, string label, string url, int depth, bool inLink, bool parseLabel = true)
         {
             url = url.Trim();
-            if (!ShellService.IsWebUrl(url))
+            if (inLink || !ShellService.IsWebUrl(url))
             {
-                // Enlaces relativos o con otros esquemas: solo el texto.
-                if (parseLabel) AddInlines(target, label, depth + 1);
+                // Enlaces relativos, con otros esquemas o dentro de la etiqueta de otro enlace: solo el texto.
+                if (parseLabel) AddInlines(target, label, depth + 1, inLink);
                 else target.Add(new Run(label));
                 return;
             }
@@ -595,7 +601,7 @@ public static class MarkdownRenderer
                 ToolTip = url,
                 Cursor = System.Windows.Input.Cursors.Hand,
             };
-            if (parseLabel) AddInlines(link.Inlines, label, depth + 1);
+            if (parseLabel) AddInlines(link.Inlines, label, depth + 1, inLink: true);
             else link.Inlines.Add(new Run(label));
 
             link.Click += (_, _) => ShellService.OpenUrl(url);

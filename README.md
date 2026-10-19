@@ -222,6 +222,8 @@ src/
   PalitoLauncher/              interfaz WPF (MVVM hecho a mano)
     Assets/ Themes/ Views/ ViewModels/ Services/ Helpers/ Converters/
 tests/PalitoLauncher.Tests/    tests xUnit (sin red, salvo IntegrationTests)
+tests/PalitoLauncher.UI.Tests/ tests de la capa WPF: ViewModels, MarkdownRenderer y errores de binding de todas las
+                               vistas (hilo STA propio, sin mostrar ventanas, sin red, datos en %TEMP%)
 scripts/                       publish.ps1, generate-icons.ps1
 docs/PUBLICAR.md               guía para publicar builds del juego
 .github/workflows/             ci.yml, release.yml

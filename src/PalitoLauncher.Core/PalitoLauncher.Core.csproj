@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="PalitoLauncher.Tests" />
+    <!-- Solo para AppPaths.OverrideRootForTests: los tests de la UI no escriben en %LOCALAPPDATA%. -->
+    <InternalsVisibleTo Include="PalitoLauncher.UI.Tests" />
   </ItemGroup>
 
 </Project>

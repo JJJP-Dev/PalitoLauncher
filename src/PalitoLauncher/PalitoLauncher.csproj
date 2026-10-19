@@ -33,4 +33,8 @@
     <None Remove="Assets\logo_source.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="PalitoLauncher.UI.Tests" />
+  </ItemGroup>
+
 </Project>

@@ -131,9 +131,9 @@ Problemas típicos:
 
 - El launcher lee las releases públicas de **JJJP-Dev/Coop2D** con la API de GitHub (sin token) y elige como build del
   juego el asset que coincide con `^2D_.+\.(zip|rar|7z)$`.
-- La **versión sale del nombre del asset** (`2D_0.0.3.zip`, `2D_0.0.2_Protype3.zip`); si no tiene, del tag y luego del
-  título. Hay actualización si la versión sube; hay **revisión** si la versión es la misma pero cambia el SHA-256 del
-  archivo (re-subiste el zip). Nunca se baja de versión automáticamente.
+- La **versión sale del nombre del asset** (`2D_0.0.3_Prototype2.zip` en pre-producción, `2D_0.1.0.zip` en
+  producción); si no tiene, del tag y luego del título. Hay actualización si la versión sube; hay **revisión** si la
+  versión es la misma pero cambia el SHA-256 del archivo (re-subiste el zip). Nunca se baja de versión automáticamente.
 - Cómo nombrar y publicar las builds del juego: **[docs/PUBLICAR.md](docs/PUBLICAR.md)**.
 
 ### Fondo remoto

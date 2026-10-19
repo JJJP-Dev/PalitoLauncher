@@ -1,0 +1,32 @@
+<UserControl x:Class="PalitoLauncher.Views.MessageDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PalitoLauncher.ViewModels"
+             Focusable="False">
+    <Border Width="480" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+            CornerRadius="12" Padding="24,22,24,20">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="32" ShadowDepth="6" Opacity="0.55" Color="Black" />
+        </Border.Effect>
+        <StackPanel>
+            <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                       TextWrapping="Wrap" />
+            <ScrollViewer MaxHeight="340" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                <TextBlock Text="{Binding Message}" FontSize="14" LineHeight="21" Foreground="{StaticResource TextDimBrush}"
+                           TextWrapping="Wrap" />
+            </ScrollViewer>
+            <DockPanel Margin="0,22,0,0" LastChildFill="False">
+                <Button x:Name="TertiaryButton" DockPanel.Dock="Left" Style="{StaticResource GhostButton}"
+                        Content="{Binding TertiaryText}" Command="{Binding TertiaryCommand}"
+                        Visibility="{Binding HasTertiary, Converter={StaticResource BoolToVis}}" />
+                <Button x:Name="PrimaryButton" DockPanel.Dock="Right" MinWidth="110" Margin="10,0,0,0"
+                        Style="{StaticResource AccentButton}"
+                        Content="{Binding PrimaryText}" Command="{Binding PrimaryCommand}" />
+                <Button x:Name="SecondaryButton" DockPanel.Dock="Right" MinWidth="100"
+                        Content="{Binding SecondaryText}" Command="{Binding SecondaryCommand}"
+                        Visibility="{Binding HasSecondary, Converter={StaticResource BoolToVis}}" />
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

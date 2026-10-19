@@ -1,0 +1,131 @@
+# Publica una versión nueva del launcher.
+#   git tag v1.0.1 && git push origin v1.0.1      → compila, prueba y crea la release "v1.0.1" con PalitoLauncher.exe
+#   (o a mano desde la pestaña Actions → Release → Run workflow, indicando la versión)
+# El auto-update de los launchers instalados busca un asset llamado EXACTAMENTE "PalitoLauncher.exe" en la última
+# release (no pre-release) de este repo. Una versión con sufijo (1.1.0-beta.1) se publica como pre-release y por tanto
+# NO llega a los amigos automáticamente.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a publicar, p. ej. 1.0.1 (se creará el tag v1.0.1)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  release:
+    name: Publicar PalitoLauncher.exe
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # Versión desde el tag (v1.2.3 → 1.2.3) o desde el campo del formulario. Se pasa por variables de entorno
+      # (nunca interpolada en el script) y se valida antes de usarla.
+      - name: Calcular la versión
+        id: ver
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          $raw = if ($env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { $env:INPUT_VERSION } else { $env:GITHUB_REF_NAME }
+          $version = "$raw".Trim() -replace '^[vV]', ''
+          if ($version -notmatch '^\d+\.\d+\.\d+(\.\d+)?(-[0-9A-Za-z][0-9A-Za-z.-]*)?$') {
+            Write-Error "Versión no válida: '$raw'. Usa el formato 1.2.3 (tag v1.2.3), opcionalmente con sufijo: 1.2.3-beta.1"
+            exit 1
+          }
+          $prerelease = if ($version.Contains('-')) { 'true' } else { 'false' }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=v$version"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "prerelease=$prerelease"
+          Write-Host "Versión: $version (tag v$version, pre-release: $prerelease)"
+
+      - name: Restaurar paquetes
+        run: dotnet restore PalitoLauncher.sln
+
+      - name: Compilar
+        run: dotnet build PalitoLauncher.sln -c Release --no-restore -p:Version=${{ steps.ver.outputs.version }}
+
+      - name: Tests
+        run: dotnet test PalitoLauncher.sln -c Release --no-build
+
+      - name: Publicar el exe único (win-x64, autocontenido)
+        run: >
+          dotnet publish src/PalitoLauncher/PalitoLauncher.csproj -c Release -r win-x64
+          -p:Version=${{ steps.ver.outputs.version }} -p:ContinuousIntegrationBuild=true -o publish
+
+      # El auto-update depende del nombre exacto y de que el exe sea autónomo: se comprueba antes de publicar.
+      - name: Comprobar PalitoLauncher.exe
+        id: exe
+        shell: pwsh
+        env:
+          EXPECTED_VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          $exe = Join-Path $PWD 'publish/PalitoLauncher.exe'
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+            Get-ChildItem publish | Format-Table Name, Length
+            Write-Error "No se generó publish/PalitoLauncher.exe (¿cambió AssemblyName?)."
+            exit 1
+          }
+          $bytes = [System.IO.File]::ReadAllBytes($exe)
+          if ($bytes.Length -lt 2 -or $bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) {
+            Write-Error "publish/PalitoLauncher.exe no es un ejecutable de Windows válido."
+            exit 1
+          }
+          $looseDlls = @(Get-ChildItem publish -Filter *.dll -File)
+          if ($looseDlls.Count -gt 0) {
+            Write-Error ("El exe no es autónomo: hay DLL sueltas en publish/ (" + ($looseDlls.Name -join ', ') + ").")
+            exit 1
+          }
+          $productVersion = (Get-Item -LiteralPath $exe).VersionInfo.ProductVersion
+          if ($productVersion -ne $env:EXPECTED_VERSION) {
+            Write-Error "La versión del exe ('$productVersion') no coincide con la del tag ('$env:EXPECTED_VERSION')."
+            exit 1
+          }
+          $sha256 = (Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          $sizeMb = ($bytes.Length / 1MB).ToString('0.0', [System.Globalization.CultureInfo]::InvariantCulture)
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "sha256=$sha256"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "size=$sizeMb MB"
+          Write-Host "PalitoLauncher.exe $productVersion · $sizeMb MB · SHA-256 $sha256"
+
+      - name: Crear la release en GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Palito Launcher ${{ steps.ver.outputs.tag }}
+          prerelease: ${{ steps.ver.outputs.prerelease == 'true' }}
+          files: publish/PalitoLauncher.exe
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          # (Cada párrafo en una sola línea: GitHub muestra los saltos de línea tal cual.)
+          body: |
+            ## Cómo instalarlo
+            Descarga **PalitoLauncher.exe** de la lista de abajo (no los archivos «Source code») y ábrelo. La primera vez se copia solo a `%LOCALAPPDATA%\Programs\PalitoLauncher` y crea el acceso «Coop2D» en el menú Inicio. Si ya tienes el launcher instalado no hace falta descargar nada: se actualiza solo.
+
+            **Aviso de Windows SmartScreen:** como el exe no está firmado con un certificado de pago, Windows puede mostrar «Windows protegió su PC». Es normal en programas pequeños como este: pulsa **Más información → Ejecutar de todas formas**. Si el navegador lo marca como poco común, elige **Conservar**.
+
+            `PalitoLauncher.exe` · ${{ steps.exe.outputs.size }} · SHA-256 `${{ steps.exe.outputs.sha256 }}`

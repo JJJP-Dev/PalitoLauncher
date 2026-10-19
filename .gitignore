@@ -1,0 +1,116 @@
+# --- Palito Launcher ---
+# Launcher antiguo (WPF .NET 8 + Google Cloud Functions): se conserva solo en local como referencia.
+_legacy/
+
+# Salida de scripts/publish.ps1 y del workflow de release.
+publish/
+
+# Carpetas de artefactos (dotnet build --artifacts-path).
+artifacts/
+artifacts_*/
+
+# --- Visual Studio / .NET (basado en la plantilla estándar de VisualStudio) ---
+
+# Archivos de usuario
+*.rsuser
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+launchSettings.local.json
+
+# Resultados de compilación
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Caché y opciones de Visual Studio / Rider / VS Code
+.vs/
+.idea/
+*.sln.iml
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Resultados de tests
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+
+# Archivos intermedios de MSBuild / NuGet
+*.binlog
+*_i.c
+*_p.c
+*_h.h
+*.ilk
+*.meta
+*.obj
+*.iobj
+*.pch
+*.pdb
+*.ipdb
+*.pgc
+*.pgd
+*.rsp
+*.sbr
+*.tlb
+*.tli
+*.tlh
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+*.log
+*.tlog
+*.vspscc
+*.vssscc
+.builds
+*.pidb
+*.svclog
+*.scc
+project.lock.json
+project.fragment.lock.json
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Perfiles de publicación con datos locales
+*.pubxml.user
+*.publishproj
+
+# Archivos temporales / del sistema
+*~
+*.bak
+*.swp
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Builds del juego descargadas a mano en la raíz para probar (no se suben al repo del launcher).
+# Solo en la raíz: los archivos de prueba que vivan en tests/ sí se versionan.
+/*.zip
+/*.rar
+/*.7z

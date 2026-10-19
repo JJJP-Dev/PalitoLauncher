@@ -1,0 +1,46 @@
+# Normaliza finales de línea: LF dentro del repo, el nativo de cada sistema al hacer checkout.
+* text=auto
+
+# Código y proyectos de Windows: siempre CRLF (coincide con .editorconfig).
+*.cs        text eol=crlf diff=csharp
+*.xaml      text eol=crlf
+*.csproj    text eol=crlf
+*.props     text eol=crlf
+*.targets   text eol=crlf
+*.sln       text eol=crlf
+*.manifest  text eol=crlf
+*.resx      text eol=crlf
+*.config    text eol=crlf
+*.ps1       text eol=crlf
+*.cmd       text eol=crlf
+*.bat       text eol=crlf
+
+# Scripts de shell: siempre LF.
+*.sh        text eol=lf
+
+# Texto genérico.
+*.md        text diff=markdown
+*.json      text
+*.yml       text
+*.yaml      text
+*.xml       text
+*.txt       text
+
+# Binarios: nunca tocar ni intentar mezclar.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.bmp       binary
+*.ico       binary
+*.webp      binary
+*.zip       binary
+*.rar       binary
+*.7z        binary
+*.exe       binary
+*.dll       binary
+*.pdb       binary
+*.ttf       binary
+*.otf       binary
+*.woff      binary
+*.woff2     binary

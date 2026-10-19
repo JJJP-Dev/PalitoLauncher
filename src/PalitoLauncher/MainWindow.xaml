@@ -1,0 +1,341 @@
+<Window x:Class="PalitoLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:PalitoLauncher.ViewModels"
+        xmlns:views="clr-namespace:PalitoLauncher.Views"
+        Title="Palito Launcher"
+        Icon="/PalitoLauncher;component/Assets/app.ico"
+        Width="1120" Height="680" MinWidth="900" MinHeight="540"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="CanResize"
+        Background="{StaticResource BgBrush}"
+        Foreground="{StaticResource TextBrush}"
+        FontFamily="{StaticResource AppFont}"
+        FontSize="14"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0"
+                      UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.TaskbarItemInfo>
+        <TaskbarItemInfo x:Name="TaskbarInfo" />
+    </Window.TaskbarItemInfo>
+
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:MessageDialogViewModel}">
+            <views:MessageDialogView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:InstallDialogViewModel}">
+            <views:InstallDialogView />
+        </DataTemplate>
+
+        <!-- Color del aviso secundario según su tipo -->
+        <Style x:Key="NoticeText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource InfoBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SecondaryNoticeKind}" Value="{x:Static vm:NoticeKind.Warning}">
+                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SecondaryNoticeKind}" Value="{x:Static vm:NoticeKind.Error}">
+                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="NoticeGlyph" TargetType="TextBlock" BasedOn="{StaticResource NoticeText}">
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Text" Value="&#xE946;" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SecondaryNoticeKind}" Value="{x:Static vm:NoticeKind.Warning}">
+                    <Setter Property="Text" Value="&#xE7BA;" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SecondaryNoticeKind}" Value="{x:Static vm:NoticeKind.Error}">
+                    <Setter Property="Text" Value="&#xEA39;" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="RootBorder" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+        <Grid x:Name="RootGrid">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="40" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- ═══════ Barra de título ═══════ -->
+            <Grid Grid.Row="0" Background="{StaticResource BgBrush}">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0" IsHitTestVisible="False">
+                    <Image Source="/PalitoLauncher;component/Assets/logo_white.png" Width="22" Height="22" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <TextBlock Text="Palito Launcher" Margin="10,0,0,0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                               Foreground="{StaticResource TextBrush}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource WindowButton}" Content="&#xE921;" Click="MinimizeButton_Click"
+                            ToolTip="Minimizar" AutomationProperties.Name="Minimizar" />
+                    <Button x:Name="MaximizeButton" Style="{StaticResource WindowButton}" Content="&#xE922;" Click="MaximizeButton_Click"
+                            ToolTip="Maximizar" AutomationProperties.Name="Maximizar" />
+                    <Button Style="{StaticResource WindowCloseButton}" Content="&#xE8BB;" Click="CloseButton_Click"
+                            ToolTip="Cerrar" AutomationProperties.Name="Cerrar" />
+                </StackPanel>
+            </Grid>
+
+            <!-- ═══════ Zona principal (deshabilitada mientras hay un diálogo) ═══════ -->
+            <Grid x:Name="MainArea" Grid.Row="1" IsEnabled="{Binding IsOverlayOpen, Converter={StaticResource InverseBool}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="72" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Navegación -->
+                <Border Grid.Column="0" Background="{StaticResource NavBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,1,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Margin="0,14,0,0" HorizontalAlignment="Center" KeyboardNavigation.TabNavigation="Continue">
+                            <Button Style="{StaticResource NavButton}" Content="&#xE80F;" Margin="0,0,0,8"
+                                    Tag="{Binding IsHomePage}" Command="{Binding NavigateCommand}" CommandParameter="Home"
+                                    ToolTip="Inicio" AutomationProperties.Name="Inicio" />
+                            <Button Style="{StaticResource NavButton}" Content="&#xE8FD;" Margin="0,0,0,8"
+                                    Tag="{Binding IsVersionsPage}" Command="{Binding NavigateCommand}" CommandParameter="Versions"
+                                    ToolTip="Versiones" AutomationProperties.Name="Versiones" />
+                            <Button Style="{StaticResource NavButton}" Content="&#xE713;"
+                                    Tag="{Binding IsSettingsPage}" Command="{Binding NavigateCommand}" CommandParameter="Settings"
+                                    ToolTip="Ajustes" AutomationProperties.Name="Ajustes" />
+                        </StackPanel>
+                        <TextBlock Grid.Row="1" Text="{Binding LauncherVersionText}" Style="{StaticResource SmallDimText}"
+                                   HorizontalAlignment="Center" Margin="4,0,4,12" ToolTip="Versión del launcher" />
+                    </Grid>
+                </Border>
+
+                <!-- Contenido -->
+                <Grid Grid.Column="1" ClipToBounds="True">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Fondo: imagen remota con degradado encima, o degradado con el logo muy tenue -->
+                    <Grid Grid.RowSpan="3" IsHitTestVisible="False">
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#0E1014" Offset="0" />
+                                    <GradientStop Color="#1B1430" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Image Source="/PalitoLauncher;component/Assets/logo_white.png" Opacity="0.035" Width="440" Stretch="Uniform"
+                               HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,48,96"
+                               Visibility="{Binding HasBackgroundImage, Converter={StaticResource InverseBoolToVis}}" />
+                        <Image Source="{Binding BackgroundImage}" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality"
+                               Visibility="{Binding HasBackgroundImage, Converter={StaticResource BoolToVis}}" />
+                        <Rectangle Visibility="{Binding HasBackgroundImage, Converter={StaticResource BoolToVis}}">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#990E1014" Offset="0" />
+                                    <GradientStop Color="#B30E1014" Offset="0.45" />
+                                    <GradientStop Color="#F00E1014" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle Visibility="{Binding HasBackgroundImage, Converter={StaticResource BoolToVis}}">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#B30E1014" Offset="0" />
+                                    <GradientStop Color="#000E1014" Offset="0.7" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                    </Grid>
+
+                    <!-- Banner de actualización del launcher -->
+                    <Border Grid.Row="0" Background="{StaticResource BannerBrush}" BorderBrush="{StaticResource AccentBrush}"
+                            BorderThickness="0,0,0,1" Padding="24,10"
+                            Visibility="{Binding IsLauncherUpdateVisible, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE896;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
+                                       Margin="0,0,10,0" />
+                            <TextBlock Grid.Column="1" Text="{Binding LauncherUpdateText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding LauncherUpdateText}" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0">
+                                <Button Style="{StaticResource AccentButton}" Content="Actualizar" Command="{Binding UpdateLauncherCommand}" />
+                                <Button Content="Ver cambios" Margin="8,0,0,0" Command="{Binding ViewLauncherChangesCommand}" />
+                                <Button Style="{StaticResource GhostButton}" Content="Omitir" Margin="8,0,0,0" Command="{Binding SkipLauncherUpdateCommand}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Páginas (se crean una sola vez) -->
+                    <Grid Grid.Row="1">
+                        <views:HomeView Visibility="{Binding IsHomePage, Converter={StaticResource BoolToVis}}" />
+                        <views:VersionsView Visibility="{Binding IsVersionsPage, Converter={StaticResource BoolToVis}}" />
+                        <Grid Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}">
+                            <views:SettingsView DataContext="{Binding Settings}" />
+                        </Grid>
+                    </Grid>
+
+                    <!-- Toast -->
+                    <Border Grid.Row="1" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,16" MaxWidth="440"
+                            Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="16,12" IsHitTestVisible="False"
+                            Visibility="{Binding IsToastVisible, Converter={StaticResource BoolToVis}}"
+                            AutomationProperties.LiveSetting="Polite">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="20" ShadowDepth="4" Opacity="0.45" Color="Black" />
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE946;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
+                                       Margin="0,1,12,0" VerticalAlignment="Top" />
+                            <TextBlock Grid.Column="1" Text="{Binding ToastText}" TextWrapping="Wrap" FontSize="13.5"
+                                       Foreground="{StaticResource TextBrush}" />
+                        </Grid>
+                    </Border>
+
+                    <!-- ═══════ Barra de acción inferior ═══════ -->
+                    <Border Grid.Row="2" Background="{StaticResource ActionBarBrush}" BorderBrush="{StaticResource BorderBrush}"
+                            BorderThickness="0,1,0,0" Padding="24,12" MinHeight="96">
+                        <Grid VerticalAlignment="Center">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,24,0">
+                                <TextBlock Text="{Binding StatusText}" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding StatusText}"
+                                           AutomationProperties.LiveSetting="Polite" />
+
+                                <ProgressBar Margin="0,8,0,0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"
+                                             IsIndeterminate="{Binding IsProgressIndeterminate, Mode=OneWay}"
+                                             Visibility="{Binding IsProgressVisible, Converter={StaticResource BoolToVis}}"
+                                             AutomationProperties.Name="Progreso">
+                                    <ProgressBar.Style>
+                                        <Style TargetType="ProgressBar" BasedOn="{StaticResource {x:Type ProgressBar}}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsProgressPaused}" Value="True">
+                                                    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ProgressBar.Style>
+                                </ProgressBar>
+
+                                <Grid Margin="0,7,0,0" Visibility="{Binding HasSecondaryNotice, Converter={StaticResource BoolToVis}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Style="{StaticResource NoticeGlyph}" />
+                                    <TextBlock Grid.Column="1" Style="{StaticResource NoticeText}" Text="{Binding SecondaryNoticeText}" FontSize="13"
+                                               TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding SecondaryNoticeText}" />
+                                    <Button Grid.Column="2" Style="{StaticResource LinkButton}" Margin="12,0,0,0" VerticalAlignment="Center"
+                                            Content="{Binding SecondaryNoticeActionText}" Command="{Binding SecondaryNoticeActionCommand}"
+                                            Visibility="{Binding HasSecondaryNoticeAction, Converter={StaticResource BoolToVis}}" />
+                                    <Button Grid.Column="3" Style="{StaticResource IconButton}" Width="26" Height="26" FontSize="10" Margin="8,0,0,0"
+                                            Content="&#xE711;" Command="{Binding DismissSecondaryNoticeCommand}"
+                                            ToolTip="Descartar aviso" AutomationProperties.Name="Descartar aviso"
+                                            Visibility="{Binding CanDismissSecondaryNotice, Converter={StaticResource BoolToVis}}" />
+                                </Grid>
+
+                                <WrapPanel Margin="0,4,0,0">
+                                    <Button Style="{StaticResource LinkButton}" Margin="0,0,18,0" Content="{Binding SecondaryLinkText}"
+                                            Command="{Binding SecondaryLinkCommand}"
+                                            Visibility="{Binding HasSecondaryLink, Converter={StaticResource BoolToVis}}" />
+                                    <Button Style="{StaticResource LinkButton}" Content="{Binding TertiaryLinkText}"
+                                            Command="{Binding TertiaryLinkCommand}"
+                                            Visibility="{Binding HasTertiaryLink, Converter={StaticResource BoolToVis}}" />
+                                </WrapPanel>
+                            </StackPanel>
+
+                            <!-- Menú ⋯ -->
+                            <Button x:Name="MoreButton" Grid.Column="1" Style="{StaticResource IconButton}" Width="48" Height="48" FontSize="18"
+                                    Margin="0,0,12,0" Content="&#xE712;" Click="MoreButton_Click"
+                                    ToolTip="Más opciones" AutomationProperties.Name="Más opciones">
+                                <Button.ContextMenu>
+                                    <ContextMenu Placement="Top">
+                                        <MenuItem Header="Abrir carpeta del juego" Command="{Binding OpenGameFolderCommand}">
+                                            <MenuItem.Icon>
+                                                <TextBlock Text="&#xE838;" Style="{StaticResource MenuGlyph}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Abrir guardados y logs del juego" Command="{Binding OpenSavesFolderCommand}">
+                                            <MenuItem.Icon>
+                                                <TextBlock Text="&#xE74E;" Style="{StaticResource MenuGlyph}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Buscar actualizaciones" Command="{Binding CheckForUpdatesCommand}">
+                                            <MenuItem.Icon>
+                                                <TextBlock Text="&#xE72C;" Style="{StaticResource MenuGlyph}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="Reparar (volver a instalar)" Command="{Binding RepairCommand}">
+                                            <MenuItem.Icon>
+                                                <TextBlock Text="&#xE90F;" Style="{StaticResource MenuGlyph}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <MenuItem Header="Desinstalar" Command="{Binding UninstallCommand}">
+                                            <MenuItem.Icon>
+                                                <TextBlock Text="&#xE74D;" Style="{StaticResource MenuGlyph}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="Crear informe para el desarrollador" Command="{Binding CreateReportCommand}">
+                                            <MenuItem.Icon>
+                                                <TextBlock Text="&#xE8A5;" Style="{StaticResource MenuGlyph}" />
+                                            </MenuItem.Icon>
+                                        </MenuItem>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+
+                            <!-- Botón principal (nunca IsDefault) -->
+                            <Button x:Name="PrimaryActionButton" Grid.Column="2" Style="{StaticResource PrimaryButton}"
+                                    Command="{Binding PrimaryCommand}" IsDefault="False"
+                                    AutomationProperties.Name="{Binding PrimaryButtonText}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding PrimaryButtonGlyph}" FontFamily="{StaticResource IconFont}" FontSize="18"
+                                               FontWeight="Normal" VerticalAlignment="Center" Margin="0,0,12,0"
+                                               Visibility="{Binding PrimaryButtonGlyph, Converter={StaticResource NullToVis}}" />
+                                    <TextBlock Text="{Binding PrimaryButtonText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- ═══════ Overlay de diálogos ═══════ -->
+            <Grid x:Name="Overlay" Grid.Row="1" Background="{StaticResource OverlayBrush}"
+                  Visibility="{Binding IsOverlayOpen, Converter={StaticResource BoolToVis}}"
+                  KeyboardNavigation.TabNavigation="Cycle"
+                  KeyboardNavigation.ControlTabNavigation="Cycle"
+                  KeyboardNavigation.DirectionalNavigation="Cycle">
+                <ContentControl x:Name="DialogHost" Content="{Binding Dialogs.CurrentDialog}" Focusable="False"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

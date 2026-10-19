@@ -1,0 +1,17 @@
+<Project>
+  <!-- Propiedades comunes a todos los proyectos. La versión del launcher se cambia aquí
+       (o la sobreescribe el workflow de release con la del tag: v1.2.3 -> 1.2.3). -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Authors>JJJP-Dev</Authors>
+    <Company>PalitoGames</Company>
+    <Product>Palito Launcher</Product>
+    <Copyright>© PalitoGames</Copyright>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Evita el sufijo "+<commit>" en InformationalVersion para que el auto-update compare versiones limpias. -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <SatelliteResourceLanguages>es;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,123 @@
+<UserControl x:Class="PalitoLauncher.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False">
+    <UserControl.Resources>
+        <Style x:Key="SettingsCard" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Margin" Value="0,16,0,0" />
+        </Style>
+        <Style x:Key="SettingsButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+        <Style x:Key="SettingsDangerButton" TargetType="Button" BasedOn="{StaticResource DangerOutlineButton}">
+            <Setter Property="Margin" Value="0,0,8,8" />
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+        <StackPanel Margin="40,30,40,32" MaxWidth="860" HorizontalAlignment="Stretch">
+            <TextBlock Text="Ajustes" Style="{StaticResource PageTitleText}" />
+
+            <!-- Instalación -->
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="Instalación" Style="{StaticResource SectionTitleText}" />
+                    <TextBlock Text="{Binding InstallPathText}" Style="{StaticResource BodyText}" Margin="0,10,0,0" />
+                    <TextBlock Text="{Binding InstallSizeText}" Style="{StaticResource DimText}" Margin="0,2,0,0"
+                               Visibility="{Binding InstallSizeText, Converter={StaticResource NullToVis}}" />
+                    <WrapPanel Margin="0,14,0,0">
+                        <!-- Unidad no disponible: salidas reales (nunca se instala en otro sitio sin elegirlo) -->
+                        <Button Style="{StaticResource SettingsButton}" Content="Elegir otra carpeta…" Command="{Binding ChooseAnotherFolderCommand}"
+                                ToolTip="Instalar el juego en otra carpeta"
+                                Visibility="{Binding IsDriveMissing, Converter={StaticResource BoolToVis}}" />
+                        <Button Style="{StaticResource SettingsButton}" Content="Olvidar esta carpeta" Command="{Binding ForgetInstallFolderCommand}"
+                                ToolTip="Dejar de usar esta carpeta (no se borra nada)"
+                                Visibility="{Binding IsDriveMissing, Converter={StaticResource BoolToVis}}" />
+                        <Button Style="{StaticResource SettingsButton}" Content="Abrir carpeta" Command="{Binding OpenInstallFolderCommand}" />
+                        <Button Style="{StaticResource SettingsButton}" Content="Mover…" Command="{Binding MoveInstallCommand}" />
+                        <Button Style="{StaticResource SettingsDangerButton}" Content="Desinstalar" Command="{Binding UninstallCommand}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Actualizaciones -->
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="Actualizaciones" Style="{StaticResource SectionTitleText}" />
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,14,0,0"
+                              Content="Descargar e instalar automáticamente" IsChecked="{Binding AutoDownloadUpdates}" />
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,12,0,0"
+                              Content="Incluir versiones de prueba (pre-release)" IsChecked="{Binding IncludePrereleases}" />
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,12,0,0"
+                              Content="Buscar actualizaciones del launcher" IsChecked="{Binding CheckLauncherUpdates}" />
+                    <Button Style="{StaticResource SettingsButton}" Content="Buscar ahora" Command="{Binding CheckNowCommand}"
+                            HorizontalAlignment="Left" Margin="0,16,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- Descargas -->
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="Descargas" Style="{StaticResource SectionTitleText}" />
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Límite de velocidad" Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" Width="180" ItemsSource="{Binding SpeedLimitOptions}"
+                                  SelectedItem="{Binding SelectedSpeedLimit}" DisplayMemberPath="Label"
+                                  AutomationProperties.Name="Límite de velocidad" />
+                    </Grid>
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,14,0,0"
+                              Content="Conservar archivos descargados" IsChecked="{Binding KeepDownloadedArchives}" />
+                    <TextBlock Text="Ocupan espacio, pero permiten reinstalar sin volver a descargar." Style="{StaticResource DimText}"
+                               Margin="0,4,58,0" />
+                    <Button Style="{StaticResource SettingsButton}" Content="Borrar descargas pendientes" Command="{Binding ClearDownloadsCommand}"
+                            HorizontalAlignment="Left" Margin="0,14,0,0" />
+                </StackPanel>
+            </Border>
+
+            <!-- Juego -->
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="Juego" Style="{StaticResource SectionTitleText}" />
+                    <TextBlock Text="Argumentos de lanzamiento" Style="{StaticResource BodyText}" Margin="0,14,0,6" />
+                    <TextBox x:Name="LaunchArgumentsBox" Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}"
+                             LostKeyboardFocus="LaunchArgumentsBox_LostKeyboardFocus"
+                             AutomationProperties.Name="Argumentos de lanzamiento" />
+                    <TextBlock Text="Opcional. Ejemplo: -screen-fullscreen 0 -screen-width 1280 -screen-height 720"
+                               Style="{StaticResource DimText}" Margin="0,4,0,0" />
+                    <Grid Margin="0,16,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Al abrir el juego" Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" Width="180" ItemsSource="{Binding AfterLaunchOptions}"
+                                  SelectedItem="{Binding SelectedAfterLaunch}" DisplayMemberPath="Label"
+                                  AutomationProperties.Name="Al abrir el juego" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Launcher -->
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="Launcher" Style="{StaticResource SectionTitleText}" />
+                    <TextBlock Text="{Binding LauncherVersionText}" Style="{StaticResource BodyText}" Margin="0,10,0,0" />
+                    <TextBlock Text="{Binding SelfUpdateNote}" Style="{StaticResource DimText}" Margin="0,2,0,0"
+                               Visibility="{Binding SelfUpdateNote, Converter={StaticResource NullToVis}}" />
+                    <WrapPanel Margin="0,14,0,0">
+                        <Button Style="{StaticResource SettingsButton}" Content="Crear acceso directo en el escritorio"
+                                Command="{Binding CreateDesktopShortcutCommand}" />
+                        <Button Style="{StaticResource SettingsButton}" Content="Abrir carpeta de logs" Command="{Binding OpenLogsFolderCommand}" />
+                        <Button Style="{StaticResource SettingsButton}" Content="Crear informe para el desarrollador"
+                                Command="{Binding CreateReportCommand}" />
+                        <Button Style="{StaticResource SettingsButton}" Content="Ver launcher en GitHub" Command="{Binding OpenLauncherGitHubCommand}" />
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

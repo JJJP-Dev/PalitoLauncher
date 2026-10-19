@@ -1,0 +1,54 @@
+# Compila y ejecuta los tests en cada push / pull request a main.
+# Los tests de integración (contra GitHub real) NO se ejecutan aquí: solo con PALITO_RUN_INTEGRATION=1.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  build:
+    name: Compilar y probar
+    runs-on: windows-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restaurar paquetes
+        run: dotnet restore PalitoLauncher.sln
+
+      - name: Compilar
+        run: dotnet build PalitoLauncher.sln -c Release --no-restore
+
+      - name: Tests
+        run: dotnet test PalitoLauncher.sln -c Release --no-build --logger trx --results-directory TestResults
+
+      - name: Guardar resultados de los tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
+          retention-days: 7

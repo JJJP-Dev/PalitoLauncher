@@ -134,7 +134,7 @@ public sealed class SurveyProviderTests : IDisposable
         // El ejemplo de docs/ (lo mantiene otro agente): si existe, tiene que ser válido para el parser.
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "PalitoLauncher.sln"))) dir = dir.Parent;
-        var example = dir is null ? null : Path.Combine(dir.FullName, "docs", "feedback.example.json");
+        var example = dir is null ? null : Path.Combine(dir.FullName, "docs", "ejemplos", "feedback.example.json");
         if (example is null || !File.Exists(example)) return;
 
         var survey = SurveyProvider.Parse(File.ReadAllText(example));

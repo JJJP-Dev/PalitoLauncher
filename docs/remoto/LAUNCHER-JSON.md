@@ -13,11 +13,11 @@ Con él cambias, sin compilar ni publicar el launcher, lo que ven todos los juga
 Solo lo leen los launchers **1.0.5 o posteriores**; los anteriores lo ignoran. Si el archivo no existe, todo funciona
 igual que en la 1.0.4: no hay anuncios, ni sesiones, ni enlaces.
 
-> Índice de toda la documentación: [docs/README.md](README.md). Pasos para publicarlo: [TAREAS-MANUALES.md, punto 3](TAREAS-MANUALES.md#3-publicar-launcherlauncherjson).
-> Código: [`LauncherManifest.cs`](../src/PalitoLauncher.Core/Remote/LauncherManifest.cs) (modelo),
-> [`ManifestProvider.cs`](../src/PalitoLauncher.Core/Remote/ManifestProvider.cs) (descarga y saneado),
-> [`ManifestLogic.cs`](../src/PalitoLauncher.Core/Remote/ManifestLogic.cs) (reglas) y
-> [`MainViewModel.Manifest.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Manifest.cs) (interfaz).
+> Índice de toda la documentación: [docs/README.md](../README.md). Pasos para publicarlo: [TAREAS-MANUALES.md, punto 3](../operacion/TAREAS-MANUALES.md#3-publicar-launcherlauncherjson).
+> Código: [`LauncherManifest.cs`](../../src/PalitoLauncher.Core/Remote/LauncherManifest.cs) (modelo),
+> [`ManifestProvider.cs`](../../src/PalitoLauncher.Core/Remote/ManifestProvider.cs) (descarga y saneado),
+> [`ManifestLogic.cs`](../../src/PalitoLauncher.Core/Remote/ManifestLogic.cs) (reglas) y
+> [`MainViewModel.Manifest.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Manifest.cs) (interfaz).
 
 ## Contenido
 
@@ -68,6 +68,8 @@ Lo que **nunca** hace:
 
 ## Ejemplo completo
 
+El mismo ejemplo, sin comentarios y listo para copiar: [launcher.example.json](../ejemplos/launcher.example.json).
+
 ```json
 {
   // Anuncios: como mucho 3 visibles a la vez (más el de «tu versión tiene un problema»).
@@ -117,7 +119,7 @@ Lo que **nunca** hace:
     "notes": "Abre el puerto UDP 7770 en tu router o usad Radmin VPN."
   },
 
-  "bugReportWebhookUrl": "https://discord.com/api/webhooks/PEGA_AQUI_LA_URL_DEL_WEBHOOK_DE_BUGS"
+  "bugReportWebhookUrl": "pw1:PEGA_AQUI_EL_WEBHOOK_DE_BUGS_OFUSCADO"
 }
 ```
 
@@ -222,16 +224,19 @@ El diálogo funciona sin este bloque; esto solo añade información.
 Webhook de Discord al que llegan los reportes de **Reportar un problema** (menú ⋯, Ajustes, aviso de cierre inesperado del
 juego y diálogos de error). Ponlo en un canal `#bugs` distinto de `#feedback`.
 
-- Mismas reglas que el webhook de la encuesta: `https://discord.com/api/webhooks/<id>/<token>` (también
-  `discordapp.com`, `canary.` o `ptb.`). Si no es válido se descarta (y se apunta en el log).
+- Mismas reglas que el webhook de la encuesta: **ofuscado** (`pw1:…`, desde la 1.0.7; se genera en Ajustes →
+  Herramientas de desarrollo → Ofuscar un webhook) o, solo si no queda más remedio, la URL
+  `https://discord.com/api/webhooks/<id>/<token>` (también `discordapp.com`, `canary.` o `ptb.`). **No publiques la URL
+  en texto plano**: hay bots que la buscan en GitHub para mandar spam ([FEEDBACK.md](FEEDBACK.md#seguridad-del-webhook-y-cómo-rotarlo)).
+  Si no es válido se descarta (y se apunta en el log).
 - **Orden de preferencia**: este webhook → el `discordWebhookUrl` de `launcher/feedback.json` → ninguno. Sin webhook,
   los reportes esperan en la bandeja de cada PC (`%LOCALAPPDATA%\PalitoLauncher\reports\outbox\`) y se envían solos
   cuando haya uno.
 - Cada reporte lleva la descripción, los pasos, la categoría, versiones, y los registros `Player.log`,
   `Player-prev.log` y `launcher.log` (últimos 2 MB de cada uno, **anonimizados**) más un `summary.txt`. Si Discord
   rechaza el tamaño, se reenvía una vez solo con el resumen.
-- El archivo es **público** (como `feedback.json`): cualquiera puede leer la URL del webhook. Si alguien hace spam,
-  rótalo ([TAREAS-MANUALES.md, punto 9](TAREAS-MANUALES.md#9-renovar-o-rotar-un-webhook)).
+- El archivo es **público** (como `feedback.json`): por eso el webhook va ofuscado. Si aun así alguien hace spam,
+  rótalo ([TAREAS-MANUALES.md, punto 9](../operacion/TAREAS-MANUALES.md#9-renovar-o-rotar-un-webhook)).
 
 Detalles del envío y de la bandeja: [FEEDBACK.md](FEEDBACK.md#reportar-un-problema-un-webhook-aparte-105) y la
 documentación de `BugReportService`.

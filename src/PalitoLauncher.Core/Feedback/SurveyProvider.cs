@@ -304,6 +304,7 @@ public sealed class SurveyProvider
         survey.Intro = FeedbackText.Clean(survey.Intro, MaxIntroLength, multiline: true);
         survey.MinSessionMinutes = Math.Clamp(survey.MinSessionMinutes, 1, 120);
         survey.MinHoursBetweenPrompts = Math.Clamp(survey.MinHoursBetweenPrompts, 0, 168);
+        WebhookObfuscation.WarnIfPlain(survey.DiscordWebhookUrl, "feedback.json");
         survey.DiscordWebhookUrl = NormalizeDiscordWebhook(survey.DiscordWebhookUrl);
 
         var source = survey.Questions ?? new List<SurveyQuestion>();
@@ -351,12 +352,19 @@ public sealed class SurveyProvider
 
     /// <summary>
     /// Webhook en forma canónica ("https://discord.com/api/webhooks/{id}/{token}", host en minúsculas, sin barra final ni
-    /// fragmento; solo se conserva el parámetro thread_id) o null si no es un webhook de Discord válido.
+    /// fragmento; solo se conserva el parámetro thread_id) o null si no es un webhook de Discord válido. Acepta también el
+    /// formato ofuscado «pw1:…» (<see cref="WebhookObfuscation"/>), que se descifra aquí.
     /// </summary>
     internal static string? NormalizeDiscordWebhook(string? url)
     {
         if (string.IsNullOrWhiteSpace(url)) return null;
         var trimmed = url.Trim();
+        if (WebhookObfuscation.IsObfuscated(trimmed))
+        {
+            var decoded = WebhookObfuscation.TryDecode(trimmed);
+            if (decoded is null || WebhookObfuscation.IsObfuscated(decoded)) return null;
+            trimmed = decoded.Trim();
+        }
         if (trimmed.Length > 2048) return null;
 
         if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)) return null;

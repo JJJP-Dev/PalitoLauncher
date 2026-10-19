@@ -53,14 +53,14 @@ public static class LauncherConfig
 
     /// <summary>
     /// Manifiesto opcional del launcher en el repo del juego: anuncios, builds con problemas, enlaces de comunidad, sesiones
-    /// de prueba, datos para hostear y el webhook de reportes de problemas. Ver docs/LAUNCHER-JSON.md.
+    /// de prueba, datos para hostear y el webhook de reportes de problemas. Ver docs/remoto/LAUNCHER-JSON.md.
     /// </summary>
     public const string RemoteManifestUrl =
         "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/launcher.json";
 
     /// <summary>
     /// Misiones de prueba opcionales en el repo del juego (retos que el launcher detecta leyendo los eventos que el juego
-    /// escribe en su Player.log). Ver docs/MISIONES.md y docs/EVENTOS-JUEGO.md. Se relee con launcher.json.
+    /// escribe en su Player.log). Ver docs/remoto/MISIONES.md y docs/juego/EVENTOS-JUEGO.md. Se relee con launcher.json.
     /// </summary>
     public const string RemoteMissionsUrl =
         "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/missions.json";

@@ -5,7 +5,7 @@ preguntas sin publicar una versión del launcher, cómo probarlo todo antes de q
 en el código.
 
 > Describe el launcher **1.0.4** (la encuesta existe desde la 1.0.3). Índice de toda la documentación:
-> [docs/README.md](README.md). Lista de tareas que solo puedes hacer tú: [TAREAS-MANUALES.md](TAREAS-MANUALES.md).
+> [docs/README.md](../README.md). Lista de tareas que solo puedes hacer tú: [TAREAS-MANUALES.md](../operacion/TAREAS-MANUALES.md).
 
 ## Contenido
 
@@ -43,7 +43,7 @@ launcher y la de Windows. Las preguntas y el webhook se definen en el archivo **
   gratis, no caduca y se puede revocar en un clic.
 - **El JSON en el repo del juego** (y no dentro del launcher) para poder cambiar preguntas y webhook en minutos, con una
   pull request, sin compilar ni publicar nada. Se descarga desde `raw.githubusercontent.com`, que **no gasta cupo de la
-  API de GitHub** (ver el límite de 60 consultas por hora en el [README](../README.md#límites-de-la-api-de-github)).
+  API de GitHub** (ver el límite de 60 consultas por hora en el [README](../../README.md#límites-de-la-api-de-github)).
 - **Bandeja de salida en disco** porque los amigos juegan a veces sin internet, o antes de que exista el webhook: una
   respuesta escrita nunca debe perderse.
 
@@ -90,7 +90,7 @@ Se aceptan solo URLs `https` de `discord.com`, `discordapp.com`, `ptb.discord.co
 añadido que se respeta es `?thread_id=<número>`, para publicar dentro de un hilo concreto (clic derecho en el hilo →
 **Copiar ID del hilo**, con el modo desarrollador de Discord activado en **Ajustes de usuario → Avanzado**); así también
 sirve un canal de foro. Lo comprueba `SurveyProvider.NormalizeDiscordWebhook` en
-[SurveyProvider.cs](../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs).
+[SurveyProvider.cs](../../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs).
 
 **Comprueba el webhook antes de seguir** (opcional, 30 segundos). En PowerShell:
 
@@ -105,16 +105,21 @@ Eliminar mensaje**).
 
 ### Paso 3. Preparar feedback.json
 
-1. Copia [`feedback.example.json`](feedback.example.json) (la encuesta de la prueba de diversión del Pre 2) a una
+1. Copia [`feedback.example.json`](../ejemplos/feedback.example.json) (la encuesta de la prueba de diversión del Pre 2) a una
    carpeta tuya, por ejemplo el Escritorio, con el nombre `feedback.json`.
-2. Ábrelo con el Bloc de notas o VS Code y sustituye
-   `https://discord.com/api/webhooks/PEGA_AQUI_LA_URL_DE_TU_WEBHOOK` por tu URL (entre las comillas).
-3. Ajusta las preguntas si quieres (ver [Cambiar las preguntas](#cambiar-las-preguntas)) y **cambia el `id`** si las
+2. **Ofusca la URL** (launcher 1.0.7 o posterior): en el launcher, **Ajustes → Herramientas de desarrollo → Modo
+   desarrollador → Ofuscar un webhook**, pega la URL del paso 2 y pulsa **Ofuscar y copiar**. Sale un valor
+   `pw1:…`. **Por qué:** hay bots que recorren los repos públicos de GitHub buscando URLs de webhooks de Discord para
+   mandar spam; el valor `pw1:` no contiene la URL (ver [Seguridad del webhook](#seguridad-del-webhook-y-cómo-rotarlo)).
+3. Ábrelo con el Bloc de notas o VS Code y sustituye
+   `pw1:PEGA_AQUI_TU_WEBHOOK_OFUSCADO` por el valor `pw1:…` que copiaste (entre las comillas). Nunca
+   pegues la URL tal cual en un archivo que vaya a GitHub.
+4. Ajusta las preguntas si quieres (ver [Cambiar las preguntas](#cambiar-las-preguntas)) y **cambia el `id`** si las
    cambias.
-4. Guárdalo en **UTF-8** (el Bloc de notas y VS Code lo hacen por defecto). **Por qué importa:** el launcher rechaza
+5. Guárdalo en **UTF-8** (el Bloc de notas y VS Code lo hacen por defecto). **Por qué importa:** el launcher rechaza
    entero un `feedback.json` remoto que no sea UTF-8 válido (las tildes guardadas en «ANSI» lo romperían) y sigue con la
    copia anterior.
-5. Comprueba que el JSON está bien formado:
+6. Comprueba que el JSON está bien formado:
 
    ```powershell
    Get-Content "$env:USERPROFILE\Desktop\feedback.json" -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null   # sin salida = correcto
@@ -125,7 +130,7 @@ webhook**:
 
 ```json
 {
-  "discordWebhookUrl": "https://discord.com/api/webhooks/123456789012345678/AbCdEf…"
+  "discordWebhookUrl": "pw1:AQIDBAUGBwgcOGKY…"
 }
 ```
 
@@ -220,15 +225,15 @@ Para dejar de invitar al cerrar el juego sin quitar la encuesta, publica el mism
 
 | Pieza | Archivo | Qué hace |
 |---|---|---|
-| Modelos | [SurveyModels.cs](../src/PalitoLauncher.Core/Feedback/SurveyModels.cs) | `SurveyDefinition`, `SurveyQuestion`, `SurveyQuestionType`, `SurveyAnswer`, `FeedbackSubmission`, `FeedbackTrigger`, `FeedbackSendOutcome` |
-| Encuesta | [SurveyProvider.cs](../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs) | `GetSurveyAsync` (local → remota → por defecto), `Parse`, `Sanitize`, `CreateDefault`, validación del webhook |
-| Envío | [FeedbackService.cs](../src/PalitoLauncher.Core/Feedback/FeedbackService.cs) | `SubmitAsync`, `FlushOutboxAsync`, `PendingCount`, `BuildDiscordPayload`, `ShouldPromptAfterSession` |
-| Descarga con caché | [GitHubClient.cs](../src/PalitoLauncher.Core/GitHub/GitHubClient.cs) | `GetCachedTextFileAsync`: descarga con ETag, valida y guarda la última copia buena |
-| Orquestación (UI) | [MainViewModel.Feedback.cs](../src/PalitoLauncher/ViewModels/MainViewModel.Feedback.cs) | Carga la encuesta al arrancar, mide la partida, muestra la invitación, abre el diálogo, vacía la bandeja |
-| Diálogo | [SurveyDialogViewModel.cs](../src/PalitoLauncher/ViewModels/SurveyDialogViewModel.cs) y [SurveyDialogView.xaml](../src/PalitoLauncher/Views/SurveyDialogView.xaml) | Validación de obligatorias, apodo, «Enviando…», confirmaciones al cancelar o cerrar |
-| Preguntas (UI) | [SurveyQuestionViewModels.cs](../src/PalitoLauncher/ViewModels/SurveyQuestionViewModels.cs) | Un ViewModel por tipo (`RatingQuestionViewModel`, `ScaleQuestionViewModel`…) |
-| Configuración | [LauncherConfig.cs](../src/PalitoLauncher.Core/LauncherConfig.cs) y [AppPaths.cs](../src/PalitoLauncher.Core/AppPaths.cs) | `RemoteFeedbackConfigUrl`, `FeedbackOutboxDir` |
-| Ajustes del jugador | [LauncherSettings.cs](../src/PalitoLauncher.Core/Settings/LauncherSettings.cs) | `AskFeedbackAfterSession`, `FeedbackNickname`, `LastFeedbackPromptUtc` |
+| Modelos | [SurveyModels.cs](../../src/PalitoLauncher.Core/Feedback/SurveyModels.cs) | `SurveyDefinition`, `SurveyQuestion`, `SurveyQuestionType`, `SurveyAnswer`, `FeedbackSubmission`, `FeedbackTrigger`, `FeedbackSendOutcome` |
+| Encuesta | [SurveyProvider.cs](../../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs) | `GetSurveyAsync` (local → remota → por defecto), `Parse`, `Sanitize`, `CreateDefault`, validación del webhook |
+| Envío | [FeedbackService.cs](../../src/PalitoLauncher.Core/Feedback/FeedbackService.cs) | `SubmitAsync`, `FlushOutboxAsync`, `PendingCount`, `BuildDiscordPayload`, `ShouldPromptAfterSession` |
+| Descarga con caché | [GitHubClient.cs](../../src/PalitoLauncher.Core/GitHub/GitHubClient.cs) | `GetCachedTextFileAsync`: descarga con ETag, valida y guarda la última copia buena |
+| Orquestación (UI) | [MainViewModel.Feedback.cs](../../src/PalitoLauncher/ViewModels/MainViewModel.Feedback.cs) | Carga la encuesta al arrancar, mide la partida, muestra la invitación, abre el diálogo, vacía la bandeja |
+| Diálogo | [SurveyDialogViewModel.cs](../../src/PalitoLauncher/ViewModels/SurveyDialogViewModel.cs) y [SurveyDialogView.xaml](../../src/PalitoLauncher/Views/SurveyDialogView.xaml) | Validación de obligatorias, apodo, «Enviando…», confirmaciones al cancelar o cerrar |
+| Preguntas (UI) | [SurveyQuestionViewModels.cs](../../src/PalitoLauncher/ViewModels/SurveyQuestionViewModels.cs) | Un ViewModel por tipo (`RatingQuestionViewModel`, `ScaleQuestionViewModel`…) |
+| Configuración | [LauncherConfig.cs](../../src/PalitoLauncher.Core/LauncherConfig.cs) y [AppPaths.cs](../../src/PalitoLauncher.Core/AppPaths.cs) | `RemoteFeedbackConfigUrl`, `FeedbackOutboxDir` |
+| Ajustes del jugador | [LauncherSettings.cs](../../src/PalitoLauncher.Core/Settings/LauncherSettings.cs) | `AskFeedbackAfterSession`, `FeedbackNickname`, `LastFeedbackPromptUtc` |
 
 La regla de diseño es la misma que en el resto del launcher: **la lógica vive en `PalitoLauncher.Core`** (sin WPF, con
 tests) y la UI solo la llama. Nada de la encuesta puede romper el launcher: cada fallo se registra en el log y se usa un
@@ -373,7 +378,7 @@ Launcher 1.0.4 · Windows 10.0.26100 · hoy a las 21:14
   «…» para cumplir los límites de Discord (25 campos y 6000 caracteres por tarjeta).
 
 Todo esto lo construye `FeedbackService.BuildDiscordPayload`, que no hace E/S y por eso tiene tests que comprueban el
-JSON exacto ([FeedbackServiceTests.cs](../tests/PalitoLauncher.Tests/FeedbackServiceTests.cs)).
+JSON exacto ([FeedbackServiceTests.cs](../../tests/PalitoLauncher.Tests/FeedbackServiceTests.cs)).
 
 ## La bandeja de salida
 
@@ -413,21 +418,40 @@ la fecha. **No** se envían el nombre de usuario de Windows, el nombre del PC, r
 equipo. Como en cualquier conexión a internet, Discord ve la IP desde la que llega el mensaje, pero no la muestra en el
 canal. El diálogo de la encuesta lo explica en una línea al pie (`SurveyDialogViewModel.FooterNote`).
 
-**La URL del webhook es pública.** El repo Coop2D es público y cualquiera puede leer `launcher/feedback.json`. Con la
-URL se puede publicar en **ese** canal, editar o borrar los mensajes que publicó ese webhook y cambiar o borrar el propio
-webhook, pero no leer el canal ni tocar nada más del servidor. Por eso:
+**La URL del webhook es la contraseña del canal.** Con ella se puede publicar en **ese** canal, editar o borrar los
+mensajes que publicó ese webhook y cambiar o borrar el propio webhook, pero no leer el canal ni tocar nada más del
+servidor. Y el repo Coop2D es público: cualquiera puede leer `launcher/feedback.json`.
+
+**Bots de spam.** Hay bots que recorren todos los repos públicos de GitHub buscando el texto
+`discord.com/api/webhooks/…` y, en cuanto encuentran uno, lo usan para publicar anuncios (cripto, Telegram…). Nos pasó
+con el webhook en texto plano. Por eso, desde el launcher **1.0.7**, los webhooks de `feedback.json`, `launcher.json` y
+`missions.json` se escriben **ofuscados**:
+
+- Valor `pw1:…` en lugar de la URL, generado en **Ajustes → Herramientas de desarrollo → Ofuscar un webhook** (con el
+  modo desarrollador activado). Cada vez sale un valor distinto y todos valen. Código:
+  [`WebhookObfuscation.cs`](../../src/PalitoLauncher.Core/Feedback/WebhookObfuscation.cs).
+- **No es cifrado de verdad**: la clave va dentro del launcher, cuyo código es público, así que alguien que quiera de
+  verdad puede descifrarlo. Lo que evita es que lo encuentren los rastreadores automáticos, que es lo que pasa en la
+  práctica. La protección real será un servidor intermedio que guarde los webhooks (pendiente, junto con privatizar los
+  repos).
+- Una URL en texto plano **se sigue aceptando**, pero el launcher avisa en el log («El webhook de feedback.json está en
+  texto plano…»).
+- Los launchers **1.0.6 o anteriores no entienden `pw1:`**: para ellos es como no tener webhook, así que guardan las
+  opiniones en su bandeja y las envían en cuanto se actualizan solos a la 1.0.7. No se pierde nada.
+
+Además:
 
 - Usa un **canal privado dedicado** solo a las opiniones.
-- No pongas el webhook en el código del launcher ni en otro sitio: solo en `feedback.json`, para poder cambiarlo sin
-  publicar versión.
-- No lo pegues en chats públicos ni en capturas.
+- No pongas el webhook en el código del launcher ni en otro sitio: solo en los JSON del repo del juego, para poder
+  cambiarlo sin publicar versión.
+- No lo pegues (ni el `pw1:`) en chats públicos ni en capturas, ni en archivos del repo del launcher.
 
 **Cómo rotarlo** (si alguien lo usa para spam, si se filtró, o por higiene cuando alguien deja el equipo):
 
 1. En Discord: `#feedback` → **Editar canal → Integraciones → Webhooks**, abre el webhook y pulsa **Eliminar webhook**.
    El spam se corta al momento.
-2. Crea un webhook nuevo ([paso 2](#paso-2-crear-el-webhook)).
-3. Actualiza `discordWebhookUrl` en `launcher/feedback.json` con una pull request
+2. Crea un webhook nuevo ([paso 2](#paso-2-crear-el-webhook)) y **ofúscalo** ([paso 3](#paso-3-preparar-feedbackjson)).
+3. Actualiza `discordWebhookUrl` en `launcher/feedback.json` con el valor `pw1:…` nuevo, con una pull request
    ([paso 5](#paso-5-publicar-launcherfeedbackjson-en-coop2d-pull-request-desde-la-web)).
 
 **No hace falta sacar versión del launcher.** Mientras tanto, las respuestas de tus amigos esperan en su bandeja de
@@ -555,7 +579,7 @@ dejar a todos sin encuesta. Solo se rechaza el archivo entero si no queda ningun
 
 El milestone **Pre 2 · Gameplay prototype** pregunta «¿es divertido combinar elementos con un compañero?», así que la
 encuesta de la prueba de diversión se centra en eso. Está lista para copiar en
-[`docs/feedback.example.json`](feedback.example.json) (cambia el placeholder del webhook por tu URL; tal cual, se ignora
+[`docs/ejemplos/feedback.example.json`](../ejemplos/feedback.example.json) (cambia el placeholder del webhook por tu URL; tal cual, se ignora
 y las respuestas se quedan en la bandeja). El test `SurveyProviderTests.Parse_DocsExampleFile_IsAccepted` comprueba que
 ese archivo sigue siendo válido: si lo editas y lo rompes, la CI falla.
 
@@ -567,7 +591,7 @@ ese archivo sigue siendo válido: si lo editas y lo rompes, la CI falla.
   "askAfterSession": true,
   "minSessionMinutes": 5,
   "minHoursBetweenPrompts": 12,
-  "discordWebhookUrl": "https://discord.com/api/webhooks/PEGA_AQUI_LA_URL_DE_TU_WEBHOOK",
+  "discordWebhookUrl": "pw1:PEGA_AQUI_TU_WEBHOOK_OFUSCADO",
   "questions": [
     {
       "id": "overall",
@@ -713,7 +737,7 @@ Por qué así:
 ## Ampliar el sistema en el código
 
 Esta sección es para cuando quieras **cambiar cómo funciona** la encuesta (no solo sus preguntas). Para las recetas
-generales (añadir un ajuste, una página, un texto…) y cómo ejecutar los tests, ver [GUIA-CODIGO.md](GUIA-CODIGO.md).
+generales (añadir un ajuste, una página, un texto…) y cómo ejecutar los tests, ver [GUIA-CODIGO.md](../codigo/GUIA-CODIGO.md).
 
 ### Mapa: qué archivo tocar para qué
 
@@ -725,7 +749,7 @@ generales (añadir un ajuste, una página, un texto…) y cómo ejecutar los tes
 | Cambiar el formato del mensaje de Discord | `FeedbackService.BuildDiscordPayload` (y `FormatAnswer`, `FormatSession`, `BuildFooter`) |
 | Cambiar el nombre con el que publica | `FeedbackService.Username` |
 | Cambiar los textos de los toasts | Constantes `FeedbackSentToast`, `FeedbackQueuedToast`… en `MainViewModel.Feedback.cs` |
-| Cambiar el aspecto del diálogo | [SurveyDialogView.xaml](../src/PalitoLauncher/Views/SurveyDialogView.xaml) (plantillas por tipo en `UserControl.Resources`) |
+| Cambiar el aspecto del diálogo | [SurveyDialogView.xaml](../../src/PalitoLauncher/Views/SurveyDialogView.xaml) (plantillas por tipo en `UserControl.Resources`) |
 | Apuntar a otro repo o archivo | `LauncherConfig.RemoteFeedbackConfigUrl` |
 
 ### Receta: un tipo de pregunta nuevo
@@ -733,14 +757,14 @@ generales (añadir un ajuste, una página, un texto…) y cómo ejecutar los tes
 Ejemplo: un tipo `yesNo` (dos botones «Sí» / «No»). Los nombres `YesNo` y `YesNoQuestionViewModel` son **nuevos**: los
 creas tú siguiendo estos pasos.
 
-1. **Modelo** — en [SurveyModels.cs](../src/PalitoLauncher.Core/Feedback/SurveyModels.cs) añade `YesNo` **al final** del
+1. **Modelo** — en [SurveyModels.cs](../../src/PalitoLauncher.Core/Feedback/SurveyModels.cs) añade `YesNo` **al final** del
    enum `SurveyQuestionType`. No hace falta tocar el parser: `SurveyProvider.ParseType` acepta cualquier nombre del enum
    sin distinguir mayúsculas, así que `"type": "yesNo"` ya se reconoce. Decide dónde va la respuesta en `SurveyAnswer`
    (`Number`, `Choices` o `Text`); para Sí/No basta `Choices` con un elemento.
 2. **Saneado** — en `SurveyProvider.SanitizeQuestion` decide qué campos aplican al tipo nuevo. Si necesita un campo
    propio en el JSON, añádelo como propiedad en `SurveyQuestion`, léelo en `SurveyProvider.ReadQuestion` (con `GetString`
    / `GetInt` / `GetBool`) y límpialo en `SanitizeQuestion` (con `FeedbackText.Clean` para textos).
-3. **ViewModel** — en [SurveyQuestionViewModels.cs](../src/PalitoLauncher/ViewModels/SurveyQuestionViewModels.cs) crea
+3. **ViewModel** — en [SurveyQuestionViewModels.cs](../../src/PalitoLauncher/ViewModels/SurveyQuestionViewModels.cs) crea
    `YesNoQuestionViewModel : SurveyQuestionViewModel` que implemente `IsAnswered` y `BuildAnswer()` y llame a
    `NotifyAnswerChanged()` cuando cambie la respuesta (así el diálogo recalcula si se puede enviar). Puedes copiar
    `ChoiceQuestionViewModel`. Después añade el caso en la fábrica:
@@ -756,21 +780,21 @@ creas tú siguiendo estos pasos.
    ```
 
    Si olvidas este paso, `Create` devuelve `null` y la pregunta **no se muestra** (sin error).
-4. **Vista** — en [SurveyDialogView.xaml](../src/PalitoLauncher/Views/SurveyDialogView.xaml), dentro de
+4. **Vista** — en [SurveyDialogView.xaml](../../src/PalitoLauncher/Views/SurveyDialogView.xaml), dentro de
    `UserControl.Resources`, añade una plantilla con `DataType="{x:Type vm:YesNoQuestionViewModel}"`. WPF elige la
    plantilla por el tipo del ViewModel; sigue el modelo de la de `ChoiceQuestionViewModel` (estilo `PillRadio`).
 5. **Mensaje de Discord** — en `FeedbackService.FormatAnswer` añade el `case` del tipo nuevo. Si no, cae en
    `default => null` y **la respuesta no se envía** (desaparece en silencio del mensaje).
 6. **Tests**:
-   - [SurveyProviderTests.cs](../tests/PalitoLauncher.Tests/SurveyProviderTests.cs): que `"type": "yesNo"` se parsea y
+   - [SurveyProviderTests.cs](../../tests/PalitoLauncher.Tests/SurveyProviderTests.cs): que `"type": "yesNo"` se parsea y
      se sanea bien.
-   - [FeedbackServiceTests.cs](../tests/PalitoLauncher.Tests/FeedbackServiceTests.cs): cómo se ve en
+   - [FeedbackServiceTests.cs](../../tests/PalitoLauncher.Tests/FeedbackServiceTests.cs): cómo se ve en
      `BuildDiscordPayload`.
-   - [SurveyDialogViewModelTests.cs](../tests/PalitoLauncher.UI.Tests/SurveyDialogViewModelTests.cs): `IsAnswered`,
+   - [SurveyDialogViewModelTests.cs](../../tests/PalitoLauncher.UI.Tests/SurveyDialogViewModelTests.cs): `IsAnswered`,
      `BuildAnswer` y que una obligatoria sin responder bloquea **Enviar**.
    - Añade una pregunta del tipo nuevo a `TestFeedback.Survey()`
-     ([TestFeedback.cs](../tests/PalitoLauncher.UI.Tests/TestHelpers/TestFeedback.cs)): así
-     [BindingSmokeTests.cs](../tests/PalitoLauncher.UI.Tests/BindingSmokeTests.cs) comprueba que la plantilla nueva no
+     ([TestFeedback.cs](../../tests/PalitoLauncher.UI.Tests/TestHelpers/TestFeedback.cs)): así
+     [BindingSmokeTests.cs](../../tests/PalitoLauncher.UI.Tests/BindingSmokeTests.cs) comprueba que la plantilla nueva no
      tiene errores de binding.
 7. **Documenta** el tipo en las tablas de este archivo.
 
@@ -784,10 +808,10 @@ importante hasta estar seguro.
 
 Ejemplo: enviar también el idioma de Windows.
 
-1. Añade la propiedad a `FeedbackSubmission` ([SurveyModels.cs](../src/PalitoLauncher.Core/Feedback/SurveyModels.cs)),
+1. Añade la propiedad a `FeedbackSubmission` ([SurveyModels.cs](../../src/PalitoLauncher.Core/Feedback/SurveyModels.cs)),
    p. ej. `public string? Language { get; set; }`. Se guarda sola en la bandeja (se serializa entera a JSON); las
    respuestas antiguas de la bandeja la tendrán a `null`, así que trátala como opcional.
-2. Rellénala: añade la propiedad a `SurveyContext` ([SurveyDialogViewModel.cs](../src/PalitoLauncher/ViewModels/SurveyDialogViewModel.cs)),
+2. Rellénala: añade la propiedad a `SurveyContext` ([SurveyDialogViewModel.cs](../../src/PalitoLauncher/ViewModels/SurveyDialogViewModel.cs)),
    dale valor en `MainViewModel.OpenSurveyAsync` (donde se crea el `SurveyContext`) y cópiala en
    `SurveyDialogViewModel.BuildSubmission`.
 3. Muéstrala en `FeedbackService.BuildDiscordPayload` con un `EmbedField` más. Ojo: el bucle reserva 3 campos para
@@ -795,13 +819,13 @@ Ejemplo: enviar también el idioma de Windows.
    campos de Discord.
 4. Actualiza `FeedbackServiceTests.BuildDiscordPayload_FollowsTheSpecifiedFormat`, que comprueba los campos exactos.
 5. **Privacidad:** el diálogo promete «No se envía nada más» (`SurveyDialogViewModel.FooterNote`). Si envías un dato
-   nuevo, cambia esa frase, la sección de privacidad de este documento y la del [README](../README.md#dar-tu-opinión).
+   nuevo, cambia esa frase, la sección de privacidad de este documento y la del [README](../../README.md#dar-tu-opinión).
 
 ### Receta: un campo nuevo en feedback.json
 
 Ejemplo: un mensaje de agradecimiento personalizado (`thankYouMessage`).
 
-1. Propiedad en `SurveyDefinition` ([SurveyModels.cs](../src/PalitoLauncher.Core/Feedback/SurveyModels.cs)).
+1. Propiedad en `SurveyDefinition` ([SurveyModels.cs](../../src/PalitoLauncher.Core/Feedback/SurveyModels.cs)).
 2. Léela en `SurveyProvider.ReadSurvey` (`GetString(props, "thankYouMessage")`) y límpiala en `SurveyProvider.Sanitize`
    (`FeedbackText.Clean(valor, máximo, multiline: false)`).
 3. Úsala donde toque (aquí, en `MainViewModel.FeedbackResultToast`, con el texto actual como valor por defecto si viene
@@ -823,7 +847,7 @@ Discord. Funciona igual que las opiniones (bandeja de salida, reintentos), pero:
 - Crear el canal `#bugs` y su webhook es igual que en los pasos 1 y 2 de esta guía.
 
 Referencia completa de `launcher.json`: [LAUNCHER-JSON.md](LAUNCHER-JSON.md). Plantilla mínima para empezar:
-[TAREAS-MANUALES.md](TAREAS-MANUALES.md#3-publicar-launcherlauncherjson).
+[TAREAS-MANUALES.md](../operacion/TAREAS-MANUALES.md#3-publicar-launcherlauncherjson).
 
 ## Problemas típicos
 

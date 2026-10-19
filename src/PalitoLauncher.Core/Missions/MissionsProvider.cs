@@ -37,7 +37,7 @@ public sealed class MissionsProvider
     internal const int MaxValueLength = 64;
     internal const double MaxCount = 1_000_000;
 
-    /// <summary>Eventos del contrato v1 (docs/EVENTOS-JUEGO.md). Uno desconocido no invalida la misión: solo se avisa.</summary>
+    /// <summary>Eventos del contrato v1 (docs/juego/EVENTOS-JUEGO.md). Uno desconocido no invalida la misión: solo se avisa.</summary>
     internal static readonly HashSet<string> KnownEvents = new(StringComparer.Ordinal)
     {
         "session_start", "session_end", "host_started", "join_attempt", "join_result", "match_joined", "player_joined",
@@ -213,6 +213,7 @@ public sealed class MissionsProvider
         }
 
         var webhookText = GetString(props, "discordWebhookUrl");
+        WebhookObfuscation.WarnIfPlain(webhookText, "missions.json");
         var webhook = SurveyProvider.NormalizeDiscordWebhook(webhookText);
         if (webhook is null && !string.IsNullOrWhiteSpace(webhookText))
             WarnOnce($"Misiones «{id}»: discordWebhookUrl no es un webhook de Discord válido; se usa el de la encuesta.");

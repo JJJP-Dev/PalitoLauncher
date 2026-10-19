@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows.Input;
 using System.Windows.Threading;
 using PalitoLauncher.Core;
+using PalitoLauncher.Core.Feedback;
 using PalitoLauncher.Core.Install;
 using PalitoLauncher.Core.Launch;
 using PalitoLauncher.Core.Logging;
@@ -10,6 +11,7 @@ using PalitoLauncher.Core.Settings;
 using PalitoLauncher.Core.Update;
 using PalitoLauncher.Core.Util;
 using PalitoLauncher.Helpers;
+using PalitoLauncher.Services;
 
 namespace PalitoLauncher.ViewModels;
 
@@ -83,6 +85,8 @@ public sealed class SettingsViewModel : ObservableObject
         };
 
         LaunchProfileOptions = LaunchProfiles.All.Select(p => new LaunchProfileOption(LaunchProfiles.GetDisplayName(p), p)).ToList();
+
+        ObfuscateWebhookCommand = new AsyncRelayCommand(ObfuscateWebhookAsync);
 
         _argumentsDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _argumentsDebounce.Tick += (_, _) => CommitLaunchArguments();
@@ -353,6 +357,78 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand LaunchExtraInstanceCommand => _owner.LaunchExtraInstanceCommand;
     public ICommand ShowHostingCommand => _owner.ShowHostingCommand;
+
+    // ───────────── Ofuscar un webhook (herramientas de desarrollo) ─────────────
+
+    private string _webhookToObfuscate = "";
+    private string? _obfuscatedWebhook;
+    private string? _obfuscateStatus;
+
+    /// <summary>URL del webhook que se quiere ofuscar. Se vacía al ofuscarla (no se queda a la vista ni se guarda).</summary>
+    public string WebhookToObfuscate
+    {
+        get => _webhookToObfuscate;
+        set => SetProperty(ref _webhookToObfuscate, value ?? "");
+    }
+
+    /// <summary>El valor «pw1:…» para pegar en feedback.json / launcher.json / missions.json.</summary>
+    public string? ObfuscatedWebhook
+    {
+        get => _obfuscatedWebhook;
+        private set
+        {
+            if (SetProperty(ref _obfuscatedWebhook, value)) OnPropertyChanged(nameof(HasObfuscatedWebhook));
+        }
+    }
+
+    public bool HasObfuscatedWebhook => !string.IsNullOrEmpty(ObfuscatedWebhook);
+
+    public string? ObfuscateStatus
+    {
+        get => _obfuscateStatus;
+        private set
+        {
+            if (SetProperty(ref _obfuscateStatus, value)) OnPropertyChanged(nameof(HasObfuscateStatus));
+        }
+    }
+
+    public bool HasObfuscateStatus => !string.IsNullOrEmpty(ObfuscateStatus);
+
+    /// <summary>«Ofuscar y copiar».</summary>
+    public ICommand ObfuscateWebhookCommand { get; }
+
+    /// <summary>Copia al portapapeles. Los tests lo sustituyen.</summary>
+    internal Func<string, Task<bool>> CopyText { get; set; } = ClipboardService.TrySetTextAsync;
+
+    private async Task ObfuscateWebhookAsync()
+    {
+        var input = (WebhookToObfuscate ?? "").Trim();
+        if (input.Length == 0)
+        {
+            ObfuscateStatus = "Pega primero la URL del webhook (Discord › Editar canal › Integraciones › Webhooks › Copiar URL del webhook).";
+            return;
+        }
+
+        string value;
+        try
+        {
+            value = WebhookObfuscation.Encode(input);
+        }
+        catch (ArgumentException)
+        {
+            ObfuscatedWebhook = null;
+            ObfuscateStatus = "Eso no es un webhook de Discord: tiene que empezar por https://discord.com/api/webhooks/.";
+            return;
+        }
+
+        WebhookToObfuscate = "";
+        ObfuscatedWebhook = value;
+        bool copied = await CopyText(value);
+        ObfuscateStatus = copied
+            ? "Copiado. Pégalo en el JSON en lugar de la URL, entre comillas, y publícalo."
+            : "Listo, pero no se pudo copiar (otra aplicación usa el portapapeles): selecciónalo y cópialo a mano.";
+        Log.Info("Se ofuscó un webhook de Discord (Ajustes › Herramientas de desarrollo)."); // nunca la URL
+    }
 
     // ───────────── Launcher ─────────────
 

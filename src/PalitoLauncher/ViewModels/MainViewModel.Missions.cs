@@ -12,7 +12,7 @@ using PalitoLauncher.Helpers;
 
 namespace PalitoLauncher.ViewModels;
 
-// Misiones de prueba (launcher/missions.json + eventos del juego en Player.log). Diseño: docs/MISIONES.md.
+// Misiones de prueba (launcher/missions.json + eventos del juego en Player.log). Diseño: docs/remoto/MISIONES.md.
 public sealed partial class MainViewModel
 {
     /// <summary>Tras cerrarse el juego, cuánto se espera a que Unity termine de escribir Player.log.</summary>
@@ -519,7 +519,7 @@ public sealed partial class MainViewModel
     // ───────────── Argumentos del juego ─────────────
 
     /// <summary>
-    /// Añade <c>-palitoSession &lt;id&gt;</c> (docs/EVENTOS-JUEGO.md, sección 6): el juego lo copia en session_start y así se
+    /// Añade <c>-palitoSession &lt;id&gt;</c> (docs/juego/EVENTOS-JUEGO.md, sección 6): el juego lo copia en session_start y así se
     /// sabe que ese log es de esta ejecución.
     /// </summary>
     internal static string AppendMissionSession(string arguments, out string sessionId)
@@ -555,7 +555,7 @@ public sealed partial class MainViewModel
         catch (Exception ex)
         {
             Log.Warn("No se pudo preparar el log de la instancia extra; usará el de Unity.", ex);
-            return arguments;
+            return arguments ?? "";
         }
         var trimmed = (arguments ?? "").Trim();
         return (trimmed.Length > 0 ? trimmed + " " : "") + "-logFile \"" + path + "\"";

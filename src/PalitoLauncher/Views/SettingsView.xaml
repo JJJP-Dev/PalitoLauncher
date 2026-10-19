@@ -291,6 +291,26 @@
                         </Button>
                         <TextBlock Style="{StaticResource DimText}" Margin="0,0,58,0"
                                    Text="Útil para probar host y cliente en tu PC (se abre con el mismo modo de pantalla y argumentos). Si el juego tiene «Force Single Instance» activado en Unity, no se abrirá otra ventana. También está junto a JUGAR y en el menú ⋯." />
+
+                        <!-- Ofuscar un webhook para los JSON públicos del repo del juego -->
+                        <TextBlock Text="Ofuscar un webhook" Style="{StaticResource BodyText}" FontWeight="SemiBold" Margin="0,18,0,0" />
+                        <TextBlock Style="{StaticResource DimText}" Margin="0,4,58,8"
+                                   Text="Para feedback.json, launcher.json y missions.json: pega la URL del webhook de Discord y usa el valor pw1:… en su lugar. Así los bots que buscan webhooks en GitHub no la encuentran. No es cifrado de verdad: no lo compartas fuera del equipo." />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding WebhookToObfuscate, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.Name="URL del webhook de Discord" />
+                            <Button Grid.Column="1" Style="{StaticResource SettingsButton}" Margin="10,0,0,0" Content="Ofuscar y copiar"
+                                    Command="{Binding ObfuscateWebhookCommand}" />
+                        </Grid>
+                        <TextBox Margin="0,8,0,0" IsReadOnly="True" Text="{Binding ObfuscatedWebhook, Mode=OneWay}" TextWrapping="Wrap"
+                                 FontFamily="{StaticResource MonoFont}" AutomationProperties.Name="Webhook ofuscado"
+                                 Visibility="{Binding HasObfuscatedWebhook, Converter={StaticResource BoolToVis}}" />
+                        <TextBlock Text="{Binding ObfuscateStatus}" Style="{StaticResource DimText}" Margin="0,6,58,0"
+                                   Visibility="{Binding HasObfuscateStatus, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
                 </StackPanel>
             </Border>

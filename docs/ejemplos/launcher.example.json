@@ -1,0 +1,54 @@
+{
+  "announcements": [
+    {
+      "id": "bienvenida-1",
+      "level": "info",
+      "title": "¡Bienvenido al playtest de Coop2D!",
+      "message": "Si algo falla, usa «Reportar un problema» en el menú ⋯.",
+      "url": "https://discord.gg/TU_INVITACION",
+      "linkText": "Unirme al Discord",
+      "dismissible": true
+    },
+    {
+      "id": "mantenimiento-oct",
+      "level": "warning",
+      "title": "Esta noche no habrá servidor de pruebas",
+      "startsUtc": "2026-10-30T18:00:00+01:00",
+      "endsUtc": "2026-10-31T09:00:00+01:00"
+    }
+  ],
+  "blockedBuilds": [
+    {
+      "match": "v0.0.2",
+      "reason": "Se desconecta al entrar en la sala del jefe."
+    }
+  ],
+  "links": [
+    {
+      "label": "Discord",
+      "url": "https://discord.gg/TU_INVITACION",
+      "icon": "discord"
+    },
+    {
+      "label": "itch.io",
+      "url": "https://TU_USUARIO.itch.io/coop2d",
+      "icon": "itch"
+    }
+  ],
+  "playtests": [
+    {
+      "id": "pre2-sesion-1",
+      "title": "Prueba de diversión del Pre 2",
+      "description": "Probamos las reacciones entre elementos. Entrad al canal de voz 5 minutos antes.",
+      "startsUtc": "2026-10-31T21:00:00+01:00",
+      "durationMinutes": 120,
+      "requiredVersion": "2D_0.0.3_Prototype2.zip",
+      "discordUrl": "https://discord.gg/TU_INVITACION"
+    }
+  ],
+  "hosting": {
+    "port": 7770,
+    "notes": "Abre el puerto UDP 7770 en tu router o usad Radmin VPN."
+  },
+  "bugReportWebhookUrl": "pw1:PEGA_AQUI_EL_WEBHOOK_DE_BUGS_OFUSCADO"
+}

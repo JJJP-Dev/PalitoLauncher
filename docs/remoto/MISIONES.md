@@ -1,9 +1,9 @@
 # Misiones de prueba (launcher 1.0.6)
 
 > Referencia del sistema en el launcher. Lo que tiene que hacer el juego (los eventos en su log) está en
-> [EVENTOS-JUEGO.md](EVENTOS-JUEGO.md); un ejemplo listo para copiar, en [missions.example.json](missions.example.json); los
-> pasos para publicarlo, en [TAREAS-MANUALES.md](TAREAS-MANUALES.md#12-misiones-de-prueba-launchermissionsjson).
-> Índice de toda la documentación: [docs/README.md](README.md).
+> [EVENTOS-JUEGO.md](../juego/EVENTOS-JUEGO.md); un ejemplo listo para copiar, en [missions.example.json](../ejemplos/missions.example.json); los
+> pasos para publicarlo, en [TAREAS-MANUALES.md](../operacion/TAREAS-MANUALES.md#12-misiones-de-prueba-launchermissionsjson).
+> Índice de toda la documentación: [docs/README.md](../README.md).
 
 Las **misiones de prueba** son retos cortos para los testers durante un playtest («Provoca un Vapor en dúo», «Únete a
 una partida ya empezada»). Sustituyen a pedirles que lean la lista de pruebas: el launcher les dice qué probar,
@@ -42,7 +42,7 @@ flowchart LR
 1. Publicas un **conjunto de misiones** en `launcher/missions.json` del repo Coop2D (por PR, como `feedback.json`).
 2. El launcher lo lee y muestra la tarjeta **Misiones de prueba** en Inicio.
 3. Al pulsar JUGAR, añade `-palitoSession <id>` a los argumentos del juego.
-4. El juego escribe eventos en su `Player.log` mientras se juega ([EVENTOS-JUEGO.md](EVENTOS-JUEGO.md)).
+4. El juego escribe eventos en su `Player.log` mientras se juega ([EVENTOS-JUEGO.md](../juego/EVENTOS-JUEGO.md)).
 5. Al cerrarse el juego, el launcher lee esos eventos, comprueba qué objetivos se cumplieron y actualiza el progreso.
 6. El jugador ve ✓ en lo conseguido y puede marcar **Falló** (con una nota) o **No la probé** en lo demás.
 7. El launcher manda o actualiza un mensaje en Discord con los resultados de ese jugador.
@@ -161,7 +161,7 @@ si es una errata.
 **Cómo se lee:**
 
 - Con `FileShare.ReadWrite | FileShare.Delete`, por líneas, hasta **64 MB** (lo que pase de ahí se ignora y se apunta).
-- Solo las líneas que encajan con las expresiones de [EVENTOS-JUEGO.md, sección 2](EVENTOS-JUEGO.md#2-formato-de-una-línea).
+- Solo las líneas que encajan con las expresiones de [EVENTOS-JUEGO.md, sección 2](../juego/EVENTOS-JUEGO.md#2-formato-de-una-línea).
   Lo demás del log (Unity, trazas, `[Perf]`) se ignora.
 - Un log puede tener varias sesiones si el juego se abrió varias veces sin launcher; cada `session_start` abre una
   nueva.
@@ -262,7 +262,8 @@ Discord (opcional)», el mismo de las opiniones y los reportes.
 - **Bandeja:** el estado local es la fuente; el envío solo baja el indicador `dirty` cuando Discord confirma. Mismas
   reglas que `FeedbackService`: 429 respeta `retry_after`, 5xx/red reintenta en la comprobación periódica, 400 deja de
   intentarlo y lo apunta.
-- **Webhook:** `discordWebhookUrl` del conjunto o, si falta, el de `feedback.json` (canal `#feedback`). Sin ninguno, los
+- **Webhook:** `discordWebhookUrl` del conjunto (ofuscado, `pw1:…`, como en `feedback.json`) o, si falta, el de
+  `feedback.json` (canal `#feedback`). Sin ninguno, los
   resultados esperan en el PC y Ajustes dice que se enviarán cuando el equipo active los envíos.
 - **Embed:** título «🧪 Misiones del Pre 2 · <nombre>» (el de «Tu nombre en Discord»; si no hay, «Jugador anónimo
   #9f8e»); descripción «**3 de 6** completadas · 1 con fallos · 1 sin probar» y las sesiones registradas; un campo por
@@ -294,19 +295,19 @@ mucho 2 manuales; `check` solo en las visuales; y un `id` de conjunto nuevo en c
 
 ## 9. Piezas de código y tests
 
-Siguiendo la estructura del proyecto ([ARQUITECTURA.md](ARQUITECTURA.md)):
+Siguiendo la estructura del proyecto ([ARQUITECTURA.md](../codigo/ARQUITECTURA.md)):
 
 | Pieza | Dónde | Qué hace |
 |---|---|---|
-| `GameEvent`, `GameSession`, `GameEventParser` | [`Core/Missions/GameEvents.cs`](../src/PalitoLauncher.Core/Missions/GameEvents.cs) | Lee un log y devuelve sesiones con sus eventos (puro salvo `ParseFile`, que nunca lanza) |
-| `MissionSet`, `Mission`, `MissionGoal`, `MissionSetState`… | [`Core/Missions/MissionModels.cs`](../src/PalitoLauncher.Core/Missions/MissionModels.cs) | Modelo de `missions.json` y del estado en disco |
-| `MissionsProvider` | [`Core/Missions/MissionsProvider.cs`](../src/PalitoLauncher.Core/Missions/MissionsProvider.cs) | Descarga, caché, `missions.local.json` y saneado (calcado de `ManifestProvider`) |
-| `MissionEvaluator` | [`Core/Missions/MissionEvaluator.cs`](../src/PalitoLauncher.Core/Missions/MissionEvaluator.cs) | Aplica sesiones a un estado: ventana, versión, partidas, trucos, `scope`, `where`, `count`/`sum`, `all`/`any`. Puro y determinista |
-| `MissionStateStore` | [`Core/Missions/MissionStateStore.cs`](../src/PalitoLauncher.Core/Missions/MissionStateStore.cs) | Lee y escribe `missions\<set>.json` de forma atómica; aparta los dañados |
-| `MissionReportService` | [`Core/Missions/MissionReportService.cs`](../src/PalitoLauncher.Core/Missions/MissionReportService.cs) | Embed y POST/PATCH al webhook |
-| `MainViewModel.Missions.cs` | [`PalitoLauncher/ViewModels/`](../src/PalitoLauncher/ViewModels/MainViewModel.Missions.cs) | Al arrancar, cada 15 min y tras `GameExited`: lee, evalúa, guarda, toast y envía; marcas del jugador; `-palitoSession` y `-logFile` |
-| `MissionsCardViewModel`, `MissionItemViewModel` | [`PalitoLauncher/ViewModels/MissionsCardViewModel.cs`](../src/PalitoLauncher/ViewModels/MissionsCardViewModel.cs) | Tarjeta y cada misión (estado, enlaces, nota) |
-| `MissionsCard.xaml` | [`PalitoLauncher/Views/`](../src/PalitoLauncher/Views/MissionsCard.xaml) | Tarjeta de Inicio |
+| `GameEvent`, `GameSession`, `GameEventParser` | [`Core/Missions/GameEvents.cs`](../../src/PalitoLauncher.Core/Missions/GameEvents.cs) | Lee un log y devuelve sesiones con sus eventos (puro salvo `ParseFile`, que nunca lanza) |
+| `MissionSet`, `Mission`, `MissionGoal`, `MissionSetState`… | [`Core/Missions/MissionModels.cs`](../../src/PalitoLauncher.Core/Missions/MissionModels.cs) | Modelo de `missions.json` y del estado en disco |
+| `MissionsProvider` | [`Core/Missions/MissionsProvider.cs`](../../src/PalitoLauncher.Core/Missions/MissionsProvider.cs) | Descarga, caché, `missions.local.json` y saneado (calcado de `ManifestProvider`) |
+| `MissionEvaluator` | [`Core/Missions/MissionEvaluator.cs`](../../src/PalitoLauncher.Core/Missions/MissionEvaluator.cs) | Aplica sesiones a un estado: ventana, versión, partidas, trucos, `scope`, `where`, `count`/`sum`, `all`/`any`. Puro y determinista |
+| `MissionStateStore` | [`Core/Missions/MissionStateStore.cs`](../../src/PalitoLauncher.Core/Missions/MissionStateStore.cs) | Lee y escribe `missions\<set>.json` de forma atómica; aparta los dañados |
+| `MissionReportService` | [`Core/Missions/MissionReportService.cs`](../../src/PalitoLauncher.Core/Missions/MissionReportService.cs) | Embed y POST/PATCH al webhook |
+| `MainViewModel.Missions.cs` | [`PalitoLauncher/ViewModels/`](../../src/PalitoLauncher/ViewModels/MainViewModel.Missions.cs) | Al arrancar, cada 15 min y tras `GameExited`: lee, evalúa, guarda, toast y envía; marcas del jugador; `-palitoSession` y `-logFile` |
+| `MissionsCardViewModel`, `MissionItemViewModel` | [`PalitoLauncher/ViewModels/MissionsCardViewModel.cs`](../../src/PalitoLauncher/ViewModels/MissionsCardViewModel.cs) | Tarjeta y cada misión (estado, enlaces, nota) |
+| `MissionsCard.xaml` | [`PalitoLauncher/Views/`](../../src/PalitoLauncher/Views/MissionsCard.xaml) | Tarjeta de Inicio |
 
 Tests: `GameEventParserTests`, `MissionsProviderTests`, `MissionEvaluatorTests` y `MissionReportServiceTests` (Core) y
 `MissionsUiTests` + `BindingSmokeTests` (interfaz).
@@ -315,11 +316,11 @@ Tests: `GameEventParserTests`, `MissionsProviderTests`, `MissionEvaluatorTests` 
 
 **Sin el juego** (antes de que Coop2D emita eventos):
 
-1. Guarda [missions.example.json](missions.example.json) como `%LOCALAPPDATA%\PalitoLauncher\missions.local.json` y abre
+1. Guarda [missions.example.json](../ejemplos/missions.example.json) como `%LOCALAPPDATA%\PalitoLauncher\missions.local.json` y abre
    el launcher: aparece la tarjeta en Inicio.
 2. Escribe a mano un `Player.log` de prueba en la carpeta de datos del juego
    (`%USERPROFILE%\AppData\LocalLow\PalitoGames\Coop2D\Player.log`) con líneas como las del
-   [ejemplo de EVENTOS-JUEGO.md](EVENTOS-JUEGO.md#8-ejemplo-de-una-sesión), con un `utc` de ahora, y reinicia el
+   [ejemplo de EVENTOS-JUEGO.md](../juego/EVENTOS-JUEGO.md#8-ejemplo-de-una-sesión), con un `utc` de ahora, y reinicia el
    launcher: las misiones que cumplan se marcan solas.
 3. En el log del launcher, busca `Misiones:` (qué conjunto, qué sesiones contaron, qué se completó y el resultado del
    envío). El **informe para el desarrollador** incluye «Misiones de prueba».

@@ -5,7 +5,7 @@ Inicio, qué reglas deciden el estado de cada hito, cómo escribir los milestone
 tocar el código si quieres cambiar el comportamiento.
 
 > Describe el launcher **1.0.4** (el roadmap existe desde la 1.0.3). Índice de toda la documentación:
-> [docs/README.md](README.md).
+> [docs/README.md](../README.md).
 
 ## Contenido
 
@@ -54,16 +54,16 @@ flowchart LR
 
 | Paso | Archivo | Qué hace |
 |---|---|---|
-| 1. Descargar | [GitHubClient.cs](../src/PalitoLauncher.Core/GitHub/GitHubClient.cs) | `GetMilestonesAsync` pide `GET /repos/{owner}/{repo}/milestones?state=all&per_page=100` y `ParseMilestones` convierte el JSON en `MilestoneInfo`, ordenados por número. Nunca lanza: si falla devuelve la caché (marcada como `OfflineCache`) o `null` |
-| 2. Modelos | [MilestoneModels.cs](../src/PalitoLauncher.Core/GitHub/MilestoneModels.cs) | `MilestoneInfo` (número, título, descripción, abierto/cerrado, tareas abiertas y cerradas, fechas, URL) y `MilestoneFetchResult` (lista + origen + aviso) |
-| 3. Clasificar | [RoadmapLogic.cs](../src/PalitoLauncher.Core/State/RoadmapLogic.cs) | `RoadmapLogic.Build` decide estado, fase y resumen de cada hito; `FormatProgress` hace el texto «14 de 25 tareas · 56 %». Lógica pura, sin E/S: por eso tiene muchos tests |
-| 4. Orquestar | [MainViewModel.Roadmap.cs](../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) | Cuándo se consulta (`RefreshRoadmapAsync`, `RefreshRoadmapManuallyAsync`, `RefreshRoadmapIfStale`), respeto del cupo, estados de carga/error y textos de la cabecera |
-| 5. Presentar | [RoadmapItemViewModel.cs](../src/PalitoLauncher/ViewModels/RoadmapItemViewModel.cs) | `RoadmapItemViewModel` (una fila: textos, barra, fechas, expandir) y `RoadmapPhaseViewModel` (un grupo de fase) |
-| 6. Dibujar | [RoadmapView.xaml](../src/PalitoLauncher/Views/RoadmapView.xaml) y [HomeView.xaml](../src/PalitoLauncher/Views/HomeView.xaml) | Plantillas XAML, colores e iconos |
+| 1. Descargar | [GitHubClient.cs](../../src/PalitoLauncher.Core/GitHub/GitHubClient.cs) | `GetMilestonesAsync` pide `GET /repos/{owner}/{repo}/milestones?state=all&per_page=100` y `ParseMilestones` convierte el JSON en `MilestoneInfo`, ordenados por número. Nunca lanza: si falla devuelve la caché (marcada como `OfflineCache`) o `null` |
+| 2. Modelos | [MilestoneModels.cs](../../src/PalitoLauncher.Core/GitHub/MilestoneModels.cs) | `MilestoneInfo` (número, título, descripción, abierto/cerrado, tareas abiertas y cerradas, fechas, URL) y `MilestoneFetchResult` (lista + origen + aviso) |
+| 3. Clasificar | [RoadmapLogic.cs](../../src/PalitoLauncher.Core/State/RoadmapLogic.cs) | `RoadmapLogic.Build` decide estado, fase y resumen de cada hito; `FormatProgress` hace el texto «14 de 25 tareas · 56 %». Lógica pura, sin E/S: por eso tiene muchos tests |
+| 4. Orquestar | [MainViewModel.Roadmap.cs](../../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) | Cuándo se consulta (`RefreshRoadmapAsync`, `RefreshRoadmapManuallyAsync`, `RefreshRoadmapIfStale`), respeto del cupo, estados de carga/error y textos de la cabecera |
+| 5. Presentar | [RoadmapItemViewModel.cs](../../src/PalitoLauncher/ViewModels/RoadmapItemViewModel.cs) | `RoadmapItemViewModel` (una fila: textos, barra, fechas, expandir) y `RoadmapPhaseViewModel` (un grupo de fase) |
+| 6. Dibujar | [RoadmapView.xaml](../../src/PalitoLauncher/Views/RoadmapView.xaml) y [HomeView.xaml](../../src/PalitoLauncher/Views/HomeView.xaml) | Plantillas XAML, colores e iconos |
 
 **Por qué la clasificación está en el Core y no en el ViewModel:** así se puede probar con datos reales sin abrir
-ninguna ventana. [RoadmapLogicTests.cs](../tests/PalitoLauncher.Tests/RoadmapLogicTests.cs) usa una copia de los 14
-milestones reales de Coop2D (en [GitHubMilestonesTests.cs](../tests/PalitoLauncher.Tests/GitHubMilestonesTests.cs),
+ninguna ventana. [RoadmapLogicTests.cs](../../tests/PalitoLauncher.Tests/RoadmapLogicTests.cs) usa una copia de los 14
+milestones reales de Coop2D (en [GitHubMilestonesTests.cs](../../tests/PalitoLauncher.Tests/GitHubMilestonesTests.cs),
 clase `Coop2DMilestonesJson`) y comprueba exactamente lo que se mostraría.
 
 ### Cuándo se consulta
@@ -182,7 +182,7 @@ queda en la vista desplegada.
 ## Caché y cupo de GitHub
 
 Sin token, la API de GitHub permite **60 consultas por hora y por IP**, y las respuestas 304 «sin cambios» **también
-cuentan** (ver [README](../README.md#límites-de-la-api-de-github)). Por eso el roadmap:
+cuentan** (ver [README](../../README.md#límites-de-la-api-de-github)). Por eso el roadmap:
 
 - **Gasta como mucho 1 consulta cada 10 minutos** de forma automática (`LauncherConfig.MilestonesFreshnessWindow`):
   si la copia guardada tiene menos de 10 min, `GitHubClient` la devuelve sin preguntar.
@@ -294,18 +294,18 @@ roadmap («3/14 hitos (origen Network)»), útil si un amigo dice que no le carg
 
 | Quiero… | Dónde | Test que lo cubre |
 |---|---|---|
-| Cambiar cada cuánto se consulta como mucho | `LauncherConfig.MilestonesFreshnessWindow` en [LauncherConfig.cs](../src/PalitoLauncher.Core/LauncherConfig.cs) | — |
+| Cambiar cada cuánto se consulta como mucho | `LauncherConfig.MilestonesFreshnessWindow` en [LauncherConfig.cs](../../src/PalitoLauncher.Core/LauncherConfig.cs) | — |
 | Cambiar la reserva de consultas | `LauncherConfig.RateLimitReserveForUser` (afecta también a las releases) | — |
 | Usar los milestones de otro repo | `LauncherConfig.GameRepoOwner` / `GameRepoName` (también cambia las releases) y `GameMilestonesPageUrl` | — |
-| Cambiar las reglas de estado | `RoadmapLogic.Build` en [RoadmapLogic.cs](../src/PalitoLauncher.Core/State/RoadmapLogic.cs) | `RoadmapLogicTests.Build_*` |
+| Cambiar las reglas de estado | `RoadmapLogic.Build` en [RoadmapLogic.cs](../../src/PalitoLauncher.Core/State/RoadmapLogic.cs) | `RoadmapLogicTests.Build_*` |
 | Añadir o cambiar una fase | `RoadmapLogic.GetPhase`, las regex `PreProductionTitle` y `VersionTitle` y las constantes `PhasePreProduction`, `PhaseProduction`, `PhaseLaunch` | `RoadmapLogicTests.Phase_IsDerivedFromTitle` |
 | Aceptar otra etiqueta para el resumen (p. ej. «Meta:») | La regex `SummaryLabel` en `RoadmapLogic` | `RoadmapLogicTests.Summary_*` |
 | Cambiar la longitud del resumen | `RoadmapLogic.MaxSummaryLength` | `Summary_LongText_IsCutAtWordWithEllipsis` |
 | Cambiar el texto de progreso | `RoadmapLogic.FormatProgress` | `RoadmapLogicTests.FormatProgress_Texts` |
-| Mostrar más hitos en Inicio | `MaxHomeRoadmapItems` en [MainViewModel.Roadmap.cs](../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) | — |
-| Cambiar los textos de estado («En curso»…) | `RoadmapItemViewModel.StatusText` y las insignias en [RoadmapView.xaml](../src/PalitoLauncher/Views/RoadmapView.xaml) | `BindingSmokeTests` (bindings) |
+| Mostrar más hitos en Inicio | `MaxHomeRoadmapItems` en [MainViewModel.Roadmap.cs](../../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) | — |
+| Cambiar los textos de estado («En curso»…) | `RoadmapItemViewModel.StatusText` y las insignias en [RoadmapView.xaml](../../src/PalitoLauncher/Views/RoadmapView.xaml) | `BindingSmokeTests` (bindings) |
 | Cambiar los mensajes de error/carga | Constantes `RoadmapFailedMessage` y `RoadmapDeferredMessage` en `MainViewModel.Roadmap.cs` | — |
-| Cambiar colores o iconos | [RoadmapView.xaml](../src/PalitoLauncher/Views/RoadmapView.xaml) (usa los pinceles del tema, p. ej. `AccentBrush`, `InfoBrush`) | `BindingSmokeTests` |
+| Cambiar colores o iconos | [RoadmapView.xaml](../../src/PalitoLauncher/Views/RoadmapView.xaml) (usa los pinceles del tema, p. ej. `AccentBrush`, `InfoBrush`) | `BindingSmokeTests` |
 | Leer más de 100 milestones | La URL de `GitHubClient.GetMilestonesAsync` (habría que pedir varias páginas) | `GitHubMilestonesTests` |
 
 Ejemplo: así decide `RoadmapLogic.Build` el estado básico de cada hito (antes de buscar el «Siguiente»):
@@ -323,4 +323,4 @@ dotnet test PalitoLauncher.sln --filter "FullyQualifiedName~RoadmapLogicTests|Fu
 ```
 
 Y si cambias la regla de estado o de fase, actualiza las tablas de este documento y la sección «Roadmap» del
-[README](../README.md#roadmap-1).
+[README](../../README.md#roadmap-1).

@@ -58,84 +58,84 @@ son la especificación. Después, solo los métodos privados que te interesen.
 
 ### Etapa 1 — Las piezas fijas
 
-1. [`LauncherConfig.cs`](../src/PalitoLauncher.Core/LauncherConfig.cs): todo lo que identifica al juego y a los repos,
+1. [`LauncherConfig.cs`](../../src/PalitoLauncher.Core/LauncherConfig.cs): todo lo que identifica al juego y a los repos,
    y los intervalos de comprobación. Fíjate en los comentarios sobre el cupo de GitHub.
-2. [`AppPaths.cs`](../src/PalitoLauncher.Core/AppPaths.cs): dónde se guarda cada cosa.
+2. [`AppPaths.cs`](../../src/PalitoLauncher.Core/AppPaths.cs): dónde se guarda cada cosa.
 3. Los modelos (clases con propiedades y casi sin lógica):
-   [`GitHubModels.cs`](../src/PalitoLauncher.Core/GitHub/GitHubModels.cs) (`ReleaseInfo`, `ReleaseAsset`, `GameRelease`,
-   `ReleaseFetchResult`), [`InstallModels.cs`](../src/PalitoLauncher.Core/Install/InstallModels.cs) (`InstalledGameInfo`,
+   [`GitHubModels.cs`](../../src/PalitoLauncher.Core/GitHub/GitHubModels.cs) (`ReleaseInfo`, `ReleaseAsset`, `GameRelease`,
+   `ReleaseFetchResult`), [`InstallModels.cs`](../../src/PalitoLauncher.Core/Install/InstallModels.cs) (`InstalledGameInfo`,
    `InstallStatus`, `InstallPhase`, `InstallProgress`) y
-   [`LauncherSettings.cs`](../src/PalitoLauncher.Core/Settings/LauncherSettings.cs).
+   [`LauncherSettings.cs`](../../src/PalitoLauncher.Core/Settings/LauncherSettings.cs).
 
 ### Etapa 2 — Lógica pura (sin disco ni red)
 
-4. [`LauncherStateLogic.cs`](../src/PalitoLauncher.Core/State/LauncherStateLogic.cs) junto con su test
-   [`LauncherStateLogicTests.cs`](../tests/PalitoLauncher.Tests/LauncherStateLogicTests.cs). Es el corazón de «qué
+4. [`LauncherStateLogic.cs`](../../src/PalitoLauncher.Core/State/LauncherStateLogic.cs) junto con su test
+   [`LauncherStateLogicTests.cs`](../../tests/PalitoLauncher.Tests/LauncherStateLogicTests.cs). Es el corazón de «qué
    muestra el botón principal». Es corto y cada caso tiene su test: perfecto para empezar.
-5. [`GameVersion.cs`](../src/PalitoLauncher.Core/Versioning/GameVersion.cs) (cómo se lee `2D_0.0.3_Prototype2.zip`) y
-   [`ReleaseSelector.cs`](../src/PalitoLauncher.Core/GitHub/ReleaseSelector.cs) (qué asset es el juego y en qué orden van
+5. [`GameVersion.cs`](../../src/PalitoLauncher.Core/Versioning/GameVersion.cs) (cómo se lee `2D_0.0.3_Prototype2.zip`) y
+   [`ReleaseSelector.cs`](../../src/PalitoLauncher.Core/GitHub/ReleaseSelector.cs) (qué asset es el juego y en qué orden van
    las releases).
-6. [`RoadmapLogic.cs`](../src/PalitoLauncher.Core/State/RoadmapLogic.cs): otro ejemplo de lógica pura.
+6. [`RoadmapLogic.cs`](../../src/PalitoLauncher.Core/State/RoadmapLogic.cs): otro ejemplo de lógica pura.
 
 ### Etapa 3 — Infraestructura del Core
 
-7. [`LauncherException.cs`](../src/PalitoLauncher.Core/Util/LauncherException.cs) (unas pocas líneas que definen cómo
-   se tratan los errores) y [`Log.cs`](../src/PalitoLauncher.Core/Logging/Log.cs) (solo la clase `Log`; `LogSink` es el
+7. [`LauncherException.cs`](../../src/PalitoLauncher.Core/Util/LauncherException.cs) (unas pocas líneas que definen cómo
+   se tratan los errores) y [`Log.cs`](../../src/PalitoLauncher.Core/Logging/Log.cs) (solo la clase `Log`; `LogSink` es el
    detalle del archivo).
-8. [`SettingsStore.cs`](../src/PalitoLauncher.Core/Settings/SettingsStore.cs): cargar y guardar ajustes sin perderlos
+8. [`SettingsStore.cs`](../../src/PalitoLauncher.Core/Settings/SettingsStore.cs): cargar y guardar ajustes sin perderlos
    nunca (copia `.bak`, archivo corrupto apartado, propiedad a propiedad).
-9. [`HttpFactory.cs`](../src/PalitoLauncher.Core/Net/HttpFactory.cs) y
-   [`GitHubClient.cs`](../src/PalitoLauncher.Core/GitHub/GitHubClient.cs): lee el `<summary>` de la clase entero y los
+9. [`HttpFactory.cs`](../../src/PalitoLauncher.Core/Net/HttpFactory.cs) y
+   [`GitHubClient.cs`](../../src/PalitoLauncher.Core/GitHub/GitHubClient.cs): lee el `<summary>` de la clase entero y los
    métodos públicos (`GetReleasesAsync`, `GetMilestonesAsync`, `GetLatestReleaseAsync`, `GetCachedFileAsync`,
    `GetCachedTextFileAsync`). Luego `FetchReleasesAsync` para ver el flujo completo con caché.
 
 ### Etapa 4 — Instalar y jugar
 
-10. [`FileDownloader.cs`](../src/PalitoLauncher.Core/Downloads/FileDownloader.cs): solo el `<summary>` de la clase al
+10. [`FileDownloader.cs`](../../src/PalitoLauncher.Core/Downloads/FileDownloader.cs): solo el `<summary>` de la clase al
     principio (es largo pero lo explica todo) y `DownloadAsync`.
-11. [`ArchiveExtractor.cs`](../src/PalitoLauncher.Core/Install/ArchiveExtractor.cs): `ExtractAsync` y `FindContentRoot`.
-12. [`GameInstaller.cs`](../src/PalitoLauncher.Core/Install/GameInstaller.cs): el `<summary>` de la clase (estructura en
+11. [`ArchiveExtractor.cs`](../../src/PalitoLauncher.Core/Install/ArchiveExtractor.cs): `ExtractAsync` y `FindContentRoot`.
+12. [`GameInstaller.cs`](../../src/PalitoLauncher.Core/Install/GameInstaller.cs): el `<summary>` de la clase (estructura en
     disco), luego `InstallAsync` → `InstallCoreAsync` → `SwapIn`, y `Recover` → `RecoverCore`. Ten al lado el diagrama
     de la [sección 6 de ARQUITECTURA.md](ARQUITECTURA.md#6-instalar-y-actualizar-el-juego).
-13. [`GameProcessManager.cs`](../src/PalitoLauncher.Core/Launch/GameProcessManager.cs): `Launch`,
+13. [`GameProcessManager.cs`](../../src/PalitoLauncher.Core/Launch/GameProcessManager.cs): `Launch`,
     `TryAttachToRunning`, los eventos `GameStarted`/`GameExited`.
 
 ### Etapa 5 — El launcher se cuida a sí mismo
 
-14. [`LauncherInstallation.cs`](../src/PalitoLauncher.Core/Update/LauncherInstallation.cs): `EnsureInstalled` y `Decide`.
-15. [`LauncherSelfUpdater.cs`](../src/PalitoLauncher.Core/Update/LauncherSelfUpdater.cs): el `<summary>` de la clase,
+14. [`LauncherInstallation.cs`](../../src/PalitoLauncher.Core/Update/LauncherInstallation.cs): `EnsureInstalled` y `Decide`.
+15. [`LauncherSelfUpdater.cs`](../../src/PalitoLauncher.Core/Update/LauncherSelfUpdater.cs): el `<summary>` de la clase,
     `CheckAsync` y `DownloadAndApplyCoreAsync`.
 
 ### Etapa 6 — La interfaz
 
-16. [`App.xaml.cs`](../src/PalitoLauncher/App.xaml.cs): `OnStartup` de arriba abajo (los pasos están numerados).
-17. [`ObservableObject.cs`](../src/PalitoLauncher/ViewModels/ObservableObject.cs) y
-    [`RelayCommand.cs`](../src/PalitoLauncher/ViewModels/RelayCommand.cs): la base de todo el MVVM (ver
+16. [`App.xaml.cs`](../../src/PalitoLauncher/App.xaml.cs): `OnStartup` de arriba abajo (los pasos están numerados).
+17. [`ObservableObject.cs`](../../src/PalitoLauncher/ViewModels/ObservableObject.cs) y
+    [`RelayCommand.cs`](../../src/PalitoLauncher/ViewModels/RelayCommand.cs): la base de todo el MVVM (ver
     [3.9](#39-mvvm-a-mano-observableobject-e-inotifypropertychanged) y [3.10](#310-comandos-relaycommand-y-asyncrelaycommand)).
-18. [`MainWindow.xaml`](../src/PalitoLauncher/MainWindow.xaml): la estructura visual completa (barra de título,
+18. [`MainWindow.xaml`](../../src/PalitoLauncher/MainWindow.xaml): la estructura visual completa (barra de título,
     navegación, páginas, barra de acción, overlay). Busca cada `{Binding ...}` en el ViewModel con F12.
-19. [`MainViewModel.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.cs): el constructor (crea todo y los comandos) y
+19. [`MainViewModel.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.cs): el constructor (crea todo y los comandos) y
     `UpdateState()` (traduce el estado a lo que se ve).
-20. [`MainViewModel.Startup.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Startup.cs): `InitializeAsync`,
+20. [`MainViewModel.Startup.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Startup.cs): `InitializeAsync`,
     `RefreshReleasesAsync`, `PeriodicCheckAsync`, `HandleGameExitedAsync`.
-21. [`MainViewModel.Operations.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Operations.cs): `ExecutePrimary`,
+21. [`MainViewModel.Operations.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Operations.cs): `ExecutePrimary`,
     `RunFlowCoreAsync`, `StartOperation` / `RunOperationCoreAsync`, `InstallBodyAsync`, `PlayAsync`,
     `HandleExceptionAsync`.
-22. [`SettingsViewModel.cs`](../src/PalitoLauncher/ViewModels/SettingsViewModel.cs) +
-    [`SettingsView.xaml`](../src/PalitoLauncher/Views/SettingsView.xaml): el ejemplo más simple de vista + ViewModel.
-23. [`DialogService.cs`](../src/PalitoLauncher/Services/DialogService.cs) +
-    [`MessageDialogViewModel.cs`](../src/PalitoLauncher/ViewModels/MessageDialogViewModel.cs): cómo funcionan los diálogos.
-24. [`Theme.xaml`](../src/PalitoLauncher/Themes/Theme.xaml): por encima, para saber qué estilos existen.
+22. [`SettingsViewModel.cs`](../../src/PalitoLauncher/ViewModels/SettingsViewModel.cs) +
+    [`SettingsView.xaml`](../../src/PalitoLauncher/Views/SettingsView.xaml): el ejemplo más simple de vista + ViewModel.
+23. [`DialogService.cs`](../../src/PalitoLauncher/Services/DialogService.cs) +
+    [`MessageDialogViewModel.cs`](../../src/PalitoLauncher/ViewModels/MessageDialogViewModel.cs): cómo funcionan los diálogos.
+24. [`Theme.xaml`](../../src/PalitoLauncher/Themes/Theme.xaml): por encima, para saber qué estilos existen.
 
 ### Etapa 7 — Funciones añadidas después
 
-25. Roadmap: [`MainViewModel.Roadmap.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) y
-    [`RoadmapView.xaml`](../src/PalitoLauncher/Views/RoadmapView.xaml) (más detalle en [ROADMAP.md](ROADMAP.md)).
-26. Opiniones: [`SurveyProvider.cs`](../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs),
-    [`FeedbackService.cs`](../src/PalitoLauncher.Core/Feedback/FeedbackService.cs),
-    [`MainViewModel.Feedback.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Feedback.cs) (más detalle en
-    [FEEDBACK.md](FEEDBACK.md)).
-27. [`MarkdownRenderer.cs`](../src/PalitoLauncher/Helpers/MarkdownRenderer.cs): cómo se dibujan las notas de las releases.
+25. Roadmap: [`MainViewModel.Roadmap.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) y
+    [`RoadmapView.xaml`](../../src/PalitoLauncher/Views/RoadmapView.xaml) (más detalle en [ROADMAP.md](../remoto/ROADMAP.md)).
+26. Opiniones: [`SurveyProvider.cs`](../../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs),
+    [`FeedbackService.cs`](../../src/PalitoLauncher.Core/Feedback/FeedbackService.cs),
+    [`MainViewModel.Feedback.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Feedback.cs) (más detalle en
+    [FEEDBACK.md](../remoto/FEEDBACK.md)).
+27. [`MarkdownRenderer.cs`](../../src/PalitoLauncher/Helpers/MarkdownRenderer.cs): cómo se dibujan las notas de las releases.
 
 ---
 
@@ -311,7 +311,7 @@ MVVM separa tres cosas:
 
 La vista se «engancha» al ViewModel con *bindings*. Para que la vista se entere de que una propiedad cambió, el
 ViewModel implementa `INotifyPropertyChanged`: un evento que dice «la propiedad X cambió». Toda la base está en
-[`ObservableObject.cs`](../src/PalitoLauncher/ViewModels/ObservableObject.cs):
+[`ObservableObject.cs`](../../src/PalitoLauncher/ViewModels/ObservableObject.cs):
 
 ```csharp
 protected bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
@@ -350,7 +350,7 @@ Si se te olvida el `OnPropertyChanged(nameof(...))` de la dependiente, la vista 
 
 Un botón no llama a un método directamente: se enlaza a un `ICommand` (`Command="{Binding RepairCommand}"`). Un
 comando tiene `Execute` (qué hace) y `CanExecute` (si el botón está habilitado). En
-[`RelayCommand.cs`](../src/PalitoLauncher/ViewModels/RelayCommand.cs) hay dos:
+[`RelayCommand.cs`](../../src/PalitoLauncher/ViewModels/RelayCommand.cs) hay dos:
 
 - `RelayCommand`: para acciones síncronas o que lanzan un flujo con `RunFlow`.
 - `AsyncRelayCommand`: para métodos `async`. Mientras se ejecuta, `CanExecute` devuelve `false` (el botón se
@@ -376,7 +376,7 @@ Lo que verás en las vistas:
 | `Text="{Binding StatusText}"` | Muestra la propiedad `StatusText` del `DataContext` |
 | `IsChecked="{Binding AutoDownloadUpdates}"` | En un CheckBox es bidireccional: al marcarlo se asigna la propiedad |
 | `Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}"` | En un TextBox, actualiza el ViewModel con cada tecla (por defecto lo haría al perder el foco) |
-| `Visibility="{Binding HasReleases, Converter={StaticResource BoolToVis}}"` | Convierte un `bool` en `Visible`/`Collapsed` con un conversor de [`Converters/`](../src/PalitoLauncher/Converters) |
+| `Visibility="{Binding HasReleases, Converter={StaticResource BoolToVis}}"` | Convierte un `bool` en `Visible`/`Collapsed` con un conversor de [`Converters/`](../../src/PalitoLauncher/Converters) |
 | `Command="{Binding NavigateCommand}" CommandParameter="Settings"` | Ejecuta el comando con un parámetro |
 | `Style="{StaticResource ToggleSwitch}"` | Aplica un estilo definido en `Theme.xaml` |
 
@@ -438,7 +438,7 @@ periódicas se usa `DispatcherTimer`, que ya «tickea» en el hilo de UI (`_peri
   `Dialogs.ShowAsync(título, mensaje, textoPrimario, textoSecundario, isDanger, textoTerciario)`.
 - **ItemTemplate**: las listas (Versiones, Roadmap) son `ItemsControl` con una plantilla por elemento enlazada a un
   ViewModel pequeño (`ReleaseItemViewModel`, `RoadmapItemViewModel`).
-- **El tema** ([`Theme.xaml`](../src/PalitoLauncher/Themes/Theme.xaml)) se carga en `App.xaml` y define:
+- **El tema** ([`Theme.xaml`](../../src/PalitoLauncher/Themes/Theme.xaml)) se carga en `App.xaml` y define:
   - la paleta como `Color` + `SolidColorBrush` (`AccentBrush`, `TextDimBrush`, `DangerBrush`…);
   - las fuentes (`AppFont`, `IconFont` para los iconos Segoe Fluent, `MonoFont`);
   - los conversores (`BoolToVis`, `InverseBoolToVis`, `InverseBool`, `NullToVis`, `InverseNullToVis`);
@@ -454,12 +454,12 @@ periódicas se usa `DispatcherTimer`, que ya «tickea» en el hilo de UI (`_peri
 
 El ViewModel no conoce la ventana, pero a veces necesita que haga algo (minimizarse, cerrarse, parpadear). Para eso
 publica eventos (`MinimizeRequested`, `RestoreRequested`, `AttentionRequested`, `CloseRequested`, `ShutdownRequested`)
-y [`MainWindow.xaml.cs`](../src/PalitoLauncher/MainWindow.xaml.cs) se suscribe en su constructor. Así el ViewModel se
+y [`MainWindow.xaml.cs`](../../src/PalitoLauncher/MainWindow.xaml.cs) se suscribe en su constructor. Así el ViewModel se
 puede probar sin ventana.
 
 ### 3.15 Errores: LauncherException y «nunca lanza»
 
-- [`LauncherException`](../src/PalitoLauncher.Core/Util/LauncherException.cs) = error **esperado** cuyo mensaje se
+- [`LauncherException`](../../src/PalitoLauncher.Core/Util/LauncherException.cs) = error **esperado** cuyo mensaje se
   enseña tal cual al usuario: «No hay espacio suficiente en el disco…».
 - Cualquier otra excepción = **fallo inesperado**: se registra con `Log.Error` y el usuario ve el mensaje genérico con
   «Crear informe» (`MainViewModel.HandleExceptionAsync`).
@@ -536,9 +536,9 @@ Con F5 en Visual Studio o con `dotnet run --project src/PalitoLauncher -- --port
 ### 4.4 Trucos útiles
 
 - **Probar una encuesta sin publicarla**: crea `%LOCALAPPDATA%\PalitoLauncher\feedback.local.json` (ver
-  [FEEDBACK.md](FEEDBACK.md)).
+  [FEEDBACK.md](../remoto/FEEDBACK.md)).
 - **1.0.5**: igual para `launcher.json`, con `%LOCALAPPDATA%\PalitoLauncher\launcher.local.json` (ver
-  [LAUNCHER-JSON.md](LAUNCHER-JSON.md)), y un interruptor de modo desarrollador en Ajustes
+  [LAUNCHER-JSON.md](../remoto/LAUNCHER-JSON.md)), y un interruptor de modo desarrollador en Ajustes
   (`LauncherSettings.DeveloperMode`) para herramientas como abrir más instancias del juego.
 - **Forzar que vuelva a consultar todo**: cierra el launcher y borra la carpeta `%LOCALAPPDATA%\PalitoLauncher\cache`
   (se regenera sola). Ojo: la siguiente vez gasta cupo.
@@ -573,11 +573,11 @@ $env:PALITO_RUN_INTEGRATION = "1"
 dotnet test PalitoLauncher.sln --filter "FullyQualifiedName~IntegrationTests"
 ```
 
-La CI ([`ci.yml`](../.github/workflows/ci.yml)) ejecuta todos los demás en cada push a `main`.
+La CI ([`ci.yml`](../../.github/workflows/ci.yml)) ejecuta todos los demás en cada push a `main`.
 
 ### 5.2 Tests del Core
 
-[`tests/PalitoLauncher.Tests`](../tests/PalitoLauncher.Tests) tiene un archivo por clase (`GameInstallerTests.cs`,
+[`tests/PalitoLauncher.Tests`](../../tests/PalitoLauncher.Tests) tiene un archivo por clase (`GameInstallerTests.cs`,
 `GitHubClientTests.cs`…). Usan xUnit: `[Fact]` es un test, `[Theory]` + `[InlineData(...)]` es el mismo test con varios
 datos, y `Assert.Equal(esperado, real)` comprueba.
 
@@ -627,18 +627,18 @@ Ayudantes en `TestHelpers/` (cada subcarpeta la creó una parte distinta del des
 
 ### 5.3 Tests de la UI
 
-[`tests/PalitoLauncher.UI.Tests`](../tests/PalitoLauncher.UI.Tests) prueba ViewModels y vistas **sin mostrar ninguna
+[`tests/PalitoLauncher.UI.Tests`](../../tests/PalitoLauncher.UI.Tests) prueba ViewModels y vistas **sin mostrar ninguna
 ventana**:
 
-- [`TestHelpers/WpfHost.cs`](../tests/PalitoLauncher.UI.Tests/TestHelpers/WpfHost.cs) crea un hilo de UI propio con
+- [`TestHelpers/WpfHost.cs`](../../tests/PalitoLauncher.UI.Tests/TestHelpers/WpfHost.cs) crea un hilo de UI propio con
   una `Application` que carga el `Theme.xaml` real. **No usa la `App` real**: su `OnStartup` arrancaría el launcher de
   verdad. Además redirige los datos a `%TEMP%` y manda todo el HTTP a un proxy inexistente, así que una petición por
   error falla al instante en vez de gastar cupo.
 - Todo test de UI se ejecuta dentro de `WpfHost.RunAsync(async () => { ... })`.
-- [`BindingSmokeTests`](../tests/PalitoLauncher.UI.Tests/BindingSmokeTests.cs) construye `MainWindow`, recorre todas
+- [`BindingSmokeTests`](../../tests/PalitoLauncher.UI.Tests/BindingSmokeTests.cs) construye `MainWindow`, recorre todas
   las páginas, el menú ⋯ y los diálogos, y **falla si hay cualquier error de binding**. Si añades una vista o una página,
   añádela aquí.
-- [`TestHelpers/MainViewModelAccess.cs`](../tests/PalitoLauncher.UI.Tests/TestHelpers/MainViewModelAccess.cs) accede a
+- [`TestHelpers/MainViewModelAccess.cs`](../../tests/PalitoLauncher.UI.Tests/TestHelpers/MainViewModelAccess.cs) accede a
   campos y métodos privados del `MainViewModel` con `UnsafeAccessor`:
 
 ```csharp
@@ -669,7 +669,7 @@ el código.
 
 Ejemplo: un interruptor «Mostrar las novedades en Inicio» (nombre de ejemplo: `ShowNewsOnHome`).
 
-1. **Modelo** — en [`LauncherSettings.cs`](../src/PalitoLauncher.Core/Settings/LauncherSettings.cs), añade la propiedad
+1. **Modelo** — en [`LauncherSettings.cs`](../../src/PalitoLauncher.Core/Settings/LauncherSettings.cs), añade la propiedad
    con su valor por defecto y un comentario:
 
    ```csharp
@@ -687,7 +687,7 @@ Ejemplo: un interruptor «Mostrar las novedades en Inicio» (nombre de ejemplo: 
    - Los launchers viejos ignoran propiedades que no conocen, y los nuevos usan el valor por defecto si falta: no hace
      falta migrar nada.
 
-2. **ViewModel** — en [`SettingsViewModel.cs`](../src/PalitoLauncher/ViewModels/SettingsViewModel.cs), copia el patrón de
+2. **ViewModel** — en [`SettingsViewModel.cs`](../../src/PalitoLauncher/ViewModels/SettingsViewModel.cs), copia el patrón de
    `AutoDownloadUpdates`:
 
    ```csharp
@@ -708,7 +708,7 @@ Ejemplo: un interruptor «Mostrar las novedades en Inicio» (nombre de ejemplo: 
    el cambio no necesita ninguna reacción especial, usa `SettingChange.General`. Si sí (p. ej. volver a consultar algo),
    añade un valor al enum `SettingChange` y su `case` en `MainViewModel.OnSettingsChanged`.
 
-3. **Vista** — en [`SettingsView.xaml`](../src/PalitoLauncher/Views/SettingsView.xaml), dentro de la tarjeta que toque:
+3. **Vista** — en [`SettingsView.xaml`](../../src/PalitoLauncher/Views/SettingsView.xaml), dentro de la tarjeta que toque:
 
    ```xml
    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,14,0,0"
@@ -725,7 +725,7 @@ Ejemplo: un interruptor «Mostrar las novedades en Inicio» (nombre de ejemplo: 
 5. **Informe** — si ayuda a diagnosticar problemas, añádelo a `MainViewModel.BuildDiagnosticSummary`.
 
 6. **Tests** — un test de ida y vuelta en
-   [`SettingsStoreTests.cs`](../tests/PalitoLauncher.Tests/SettingsStoreTests.cs) (guardar, cargar, mismo valor) y
+   [`SettingsStoreTests.cs`](../../tests/PalitoLauncher.Tests/SettingsStoreTests.cs) (guardar, cargar, mismo valor) y
    ejecuta `BindingSmokeTests` para comprobar que el binding está bien escrito.
 
 ### 6.2 Añadir una página nueva a la navegación
@@ -733,7 +733,7 @@ Ejemplo: un interruptor «Mostrar las novedades en Inicio» (nombre de ejemplo: 
 Así se añadió el Roadmap en la 1.0.3: úsalo como modelo. Ejemplo: una página «Comunidad» (nombres de ejemplo:
 `AppPage.Community`, `CommunityView`).
 
-1. **Enum** — añade el valor a `AppPage` (al principio de [`MainViewModel.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.cs)).
+1. **Enum** — añade el valor a `AppPage` (al principio de [`MainViewModel.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.cs)).
 2. **Propiedad «¿es esta la página?»** — junto a `IsHomePage`, `IsVersionsPage`… añade `IsCommunityPage` (ejemplo):
    `public bool IsCommunityPage => _currentPage == AppPage.Community;`. Y en el `set` de `CurrentPage` añade
    `OnPropertyChanged(nameof(IsCommunityPage));` (si no, el botón y la página no se enteran del cambio).
@@ -744,7 +744,7 @@ Así se añadió el Roadmap en la 1.0.3: úsalo como modelo. Ejemplo: una págin
 5. **Vista** — crea `Views/CommunityView.xaml` (ejemplo) copiando la estructura de `RoadmapView.xaml` o
    `VersionsView.xaml`: un `UserControl` con un `ScrollViewer` y un `StackPanel` con `MaxWidth`. Su `.xaml.cs` solo llama
    a `InitializeComponent()`.
-6. **Botón de navegación** — en [`MainWindow.xaml`](../src/PalitoLauncher/MainWindow.xaml), en el `StackPanel` de
+6. **Botón de navegación** — en [`MainWindow.xaml`](../../src/PalitoLauncher/MainWindow.xaml), en el `StackPanel` de
    navegación, copia uno existente:
 
    ```xml
@@ -767,14 +767,14 @@ Así se añadió el Roadmap en la 1.0.3: úsalo como modelo. Ejemplo: una págin
 
 Los archivos remotos **no se deserializan directamente**: se leen campo a campo y se sanean, para que un error de
 escritura en GitHub nunca rompa el launcher. Por eso añadir un campo toca varios sitios. (Para la encuesta,
-[FEEDBACK.md](FEEDBACK.md) tiene además recetas para un tipo de pregunta nuevo y para un dato nuevo en el mensaje de
+[FEEDBACK.md](../remoto/FEEDBACK.md) tiene además recetas para un tipo de pregunta nuevo y para un dato nuevo en el mensaje de
 Discord.)
 
 **feedback.json** (ejemplo: un campo opcional `thanksMessage` con el texto del toast al enviar):
 
-1. **Modelo** — en [`SurveyModels.cs`](../src/PalitoLauncher.Core/Feedback/SurveyModels.cs), propiedad nueva en
+1. **Modelo** — en [`SurveyModels.cs`](../../src/PalitoLauncher.Core/Feedback/SurveyModels.cs), propiedad nueva en
    `SurveyDefinition` (o en `SurveyQuestion` si es por pregunta) con valor por defecto.
-2. **Lectura** — en [`SurveyProvider.cs`](../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs), método `ReadSurvey`
+2. **Lectura** — en [`SurveyProvider.cs`](../../src/PalitoLauncher.Core/Feedback/SurveyProvider.cs), método `ReadSurvey`
    (o `ReadQuestion`). Los nombres van en camelCase, igual que en el JSON:
 
    ```csharp
@@ -795,10 +795,10 @@ Discord.)
 4. **Usarlo** — donde corresponda: `MainViewModel.Feedback.cs` (cuándo preguntar, toasts),
    `SurveyDialogViewModel` (lo que se ve en la encuesta) o `FeedbackService.BuildDiscordPayload` (lo que llega a
    Discord).
-5. **Tests** — en [`SurveyProviderTests.cs`](../tests/PalitoLauncher.Tests/SurveyProviderTests.cs): que se lee, que
+5. **Tests** — en [`SurveyProviderTests.cs`](../../tests/PalitoLauncher.Tests/SurveyProviderTests.cs): que se lee, que
    falta = valor por defecto, que un valor fuera de rango se corrige.
-6. **Documentación** — tabla de campos en [FEEDBACK.md](FEEDBACK.md) y, si procede,
-   [`feedback.example.json`](feedback.example.json).
+6. **Documentación** — tabla de campos en [FEEDBACK.md](../remoto/FEEDBACK.md) y, si procede,
+   [`feedback.example.json`](../ejemplos/feedback.example.json).
 
 Compatibilidad: un launcher viejo ignora los campos que no conoce, así que puedes publicar el `feedback.json` con el
 campo nuevo antes de que todos actualicen. Lo contrario no: si el campo es **obligatorio** para que funcione algo, los
@@ -807,7 +807,7 @@ launchers viejos no lo tendrán. Diseña siempre los campos nuevos como opcional
 **launcher.json** (1.0.5): sigue el mismo patrón con sus clases: modelo en
 `src/PalitoLauncher.Core/Remote/LauncherManifest.cs`, lectura y saneado en `ManifestProvider.Parse` /
 `ManifestProvider.Sanitize`, lógica pura (fechas, coincidencias) en `ManifestLogic`, uso en el `MainViewModel`, tests en
-`ManifestProviderTests.cs` / `ManifestLogicTests.cs` y referencia en [LAUNCHER-JSON.md](LAUNCHER-JSON.md).
+`ManifestProviderTests.cs` / `ManifestLogicTests.cs` y referencia en [LAUNCHER-JSON.md](../remoto/LAUNCHER-JSON.md).
 
 ### 6.4 Añadir o cambiar un texto, o traducir
 
@@ -815,7 +815,7 @@ No hay archivos de recursos: **los textos están escritos directamente** donde s
 
 | Texto | Dónde está |
 |---|---|
-| Títulos, etiquetas y botones fijos de las páginas | En los `.xaml` de [`Views/`](../src/PalitoLauncher/Views) y en [`MainWindow.xaml`](../src/PalitoLauncher/MainWindow.xaml) (`Text="..."`, `Content="..."`, `Header="..."`, `ToolTip="..."`) |
+| Títulos, etiquetas y botones fijos de las páginas | En los `.xaml` de [`Views/`](../../src/PalitoLauncher/Views) y en [`MainWindow.xaml`](../../src/PalitoLauncher/MainWindow.xaml) (`Text="..."`, `Content="..."`, `Header="..."`, `ToolTip="..."`) |
 | Botón principal y texto de estado (JUGAR, ACTUALIZAR, «Versión instalada: …») | `MainViewModel.UpdateState` y `ComputeBusyPresentation` |
 | Avisos y toasts | Llamadas a `ShowToast(...)` y `UpdateNotice` en el `MainViewModel` |
 | Diálogos | Llamadas a `Dialogs.ShowAsync("Título", "Mensaje", "Botón", ...)` |
@@ -837,7 +837,7 @@ necesiten (con Steam, por ejemplo).
 
 ### 6.5 Cambiar el repo o el juego en LauncherConfig
 
-Casi todo lo que identifica al juego está en [`LauncherConfig.cs`](../src/PalitoLauncher.Core/LauncherConfig.cs):
+Casi todo lo que identifica al juego está en [`LauncherConfig.cs`](../../src/PalitoLauncher.Core/LauncherConfig.cs):
 
 | Constante | Qué cambia |
 |---|---|
@@ -852,15 +852,15 @@ Casi todo lo que identifica al juego está en [`LauncherConfig.cs`](../src/Palit
 
 Hay otros sitios que llevan nombres fijos (cámbialos solo si cambias de verdad de producto):
 
-- [`AppPaths.cs`](../src/PalitoLauncher.Core/AppPaths.cs): carpetas `PalitoLauncher` y `PalitoGames` de los datos.
-- [`HttpFactory.cs`](../src/PalitoLauncher.Core/Net/HttpFactory.cs): `ProductComment` con la URL del repo del launcher en
+- [`AppPaths.cs`](../../src/PalitoLauncher.Core/AppPaths.cs): carpetas `PalitoLauncher` y `PalitoGames` de los datos.
+- [`HttpFactory.cs`](../../src/PalitoLauncher.Core/Net/HttpFactory.cs): `ProductComment` con la URL del repo del launcher en
   el User-Agent.
-- [`SingleInstance.cs`](../src/PalitoLauncher/Services/SingleInstance.cs) y `LauncherSelfUpdater.UpdateAliveEventName`:
+- [`SingleInstance.cs`](../../src/PalitoLauncher/Services/SingleInstance.cs) y `LauncherSelfUpdater.UpdateAliveEventName`:
   nombres del mutex y de los eventos.
-- `AssemblyName` en [`PalitoLauncher.csproj`](../src/PalitoLauncher/PalitoLauncher.csproj) y
+- `AssemblyName` en [`PalitoLauncher.csproj`](../../src/PalitoLauncher/PalitoLauncher.csproj) y
   `LauncherSelfUpdater.AppAssemblyName` (deben coincidir) y la comprobación del nombre del exe en
-  [`release.yml`](../.github/workflows/release.yml).
-- El README, [PUBLICAR.md](PUBLICAR.md) y los enlaces de la documentación.
+  [`release.yml`](../../.github/workflows/release.yml).
+- El README, [PUBLICAR.md](../operacion/PUBLICAR.md) y los enlaces de la documentación.
 
 Pasos y precauciones:
 
@@ -874,11 +874,11 @@ Pasos y precauciones:
 
 ### 6.6 Publicar una versión del launcher
 
-El proceso completo está en el [README principal](../README.md), sección «Publicar una versión del launcher», y lo
-ejecuta [`release.yml`](../.github/workflows/release.yml). Resumen:
+El proceso completo está en el [README principal](../../README.md), sección «Publicar una versión del launcher», y lo
+ejecuta [`release.yml`](../../.github/workflows/release.yml). Resumen:
 
 1. Asegúrate de que `main` compila, los tests pasan (`dotnet test PalitoLauncher.sln`) y la CI está en verde.
-2. Sube `<Version>` en [`Directory.Build.props`](../Directory.Build.props) (p. ej. `1.0.5`) y haz commit y push (el
+2. Sube `<Version>` en [`Directory.Build.props`](../../Directory.Build.props) (p. ej. `1.0.5`) y haz commit y push (el
    historial usa mensajes como «Launcher 1.0.4: …»).
 3. Crea y sube el tag:
 
@@ -894,8 +894,8 @@ ejecuta [`release.yml`](../.github/workflows/release.yml). Resumen:
 - Un tag con sufijo (`v1.1.0-beta.1`) se publica como **pre-release** y no le llega a nadie automáticamente: sirve
   para probar.
 - Si el workflow falla, mira qué paso falló en Actions; los casos típicos y qué hacer están en
-  [TAREAS-MANUALES.md](TAREAS-MANUALES.md).
-- Las builds del **juego** se publican de otra forma: [PUBLICAR.md](PUBLICAR.md).
+  [TAREAS-MANUALES.md](../operacion/TAREAS-MANUALES.md).
+- Las builds del **juego** se publican de otra forma: [PUBLICAR.md](../operacion/PUBLICAR.md).
 
 ---
 

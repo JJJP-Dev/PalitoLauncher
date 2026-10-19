@@ -4,9 +4,9 @@ Este documento explica **cómo está montado el launcher y por qué**. No hace f
 cuando quieras tocar algo y no recuerdes dónde vive o qué puede romperse.
 
 - Describe el código tal y como salió en la **versión 1.0.4**. Lo que añade la 1.0.5 (`launcher/launcher.json`,
-  reportes de problemas, herramientas de desarrollo) se documenta aparte en [LAUNCHER-JSON.md](LAUNCHER-JSON.md).
+  reportes de problemas, herramientas de desarrollo) se documenta aparte en [LAUNCHER-JSON.md](../remoto/LAUNCHER-JSON.md).
 - Para aprender a leer y modificar el código paso a paso, ve a [GUIA-CODIGO.md](GUIA-CODIGO.md).
-- El índice de toda la documentación está en [README.md](README.md).
+- El índice de toda la documentación está en [README.md](../README.md).
 
 ## Índice
 
@@ -75,14 +75,14 @@ ninguna:
 
 ## 2. Capas y proyectos
 
-La solución [`PalitoLauncher.sln`](../PalitoLauncher.sln) tiene cuatro proyectos:
+La solución [`PalitoLauncher.sln`](../../PalitoLauncher.sln) tiene cuatro proyectos:
 
 | Proyecto | Tipo | Depende de | Contiene |
 |---|---|---|---|
-| [`src/PalitoLauncher.Core`](../src/PalitoLauncher.Core/PalitoLauncher.Core.csproj) | Biblioteca (sin WPF) | SharpCompress (solo .rar/.7z) | Toda la lógica: GitHub, versiones, descargas, instalación, proceso del juego, auto-actualización, ajustes, logs, roadmap, encuesta |
-| [`src/PalitoLauncher`](../src/PalitoLauncher/PalitoLauncher.csproj) | Aplicación WPF (`WinExe`) | Core | Ventana, vistas XAML, ViewModels, tema, diálogos |
-| [`tests/PalitoLauncher.Tests`](../tests/PalitoLauncher.Tests/PalitoLauncher.Tests.csproj) | Tests xUnit | Core | Tests de la lógica (sin red, sin ventanas) |
-| [`tests/PalitoLauncher.UI.Tests`](../tests/PalitoLauncher.UI.Tests/PalitoLauncher.UI.Tests.csproj) | Tests xUnit (WPF) | UI (y Core) | Tests de ViewModels, MarkdownRenderer y errores de binding de todas las vistas |
+| [`src/PalitoLauncher.Core`](../../src/PalitoLauncher.Core/PalitoLauncher.Core.csproj) | Biblioteca (sin WPF) | SharpCompress (solo .rar/.7z) | Toda la lógica: GitHub, versiones, descargas, instalación, proceso del juego, auto-actualización, ajustes, logs, roadmap, encuesta |
+| [`src/PalitoLauncher`](../../src/PalitoLauncher/PalitoLauncher.csproj) | Aplicación WPF (`WinExe`) | Core | Ventana, vistas XAML, ViewModels, tema, diálogos |
+| [`tests/PalitoLauncher.Tests`](../../tests/PalitoLauncher.Tests/PalitoLauncher.Tests.csproj) | Tests xUnit | Core | Tests de la lógica (sin red, sin ventanas) |
+| [`tests/PalitoLauncher.UI.Tests`](../../tests/PalitoLauncher.UI.Tests/PalitoLauncher.UI.Tests.csproj) | Tests xUnit (WPF) | UI (y Core) | Tests de ViewModels, MarkdownRenderer y errores de binding de todas las vistas |
 
 ```mermaid
 flowchart BT
@@ -96,7 +96,7 @@ flowchart BT
 ```
 
 Las flechas van en un solo sentido: **el Core no sabe que existe una ventana**. Las propiedades comunes (versión,
-`Nullable`, `LangVersion`…) están en [`Directory.Build.props`](../Directory.Build.props).
+`Nullable`, `LangVersion`…) están en [`Directory.Build.props`](../../Directory.Build.props).
 
 ### Por qué separar Core y UI
 
@@ -105,16 +105,16 @@ Las flechas van en un solo sentido: **el Core no sabe que existe una ventana**. 
 - **Cada capa tiene un idioma.** El Core habla de releases, archivos y procesos; la UI habla de botones, textos y
   colores. Así un cambio visual no puede romper la instalación, y viceversa.
 - **Lógica pura aparte.** Las decisiones sin E/S están en clases estáticas puras
-  ([`LauncherStateLogic`](../src/PalitoLauncher.Core/State/LauncherStateLogic.cs),
-  [`ReleaseSelector`](../src/PalitoLauncher.Core/GitHub/ReleaseSelector.cs),
-  [`GameVersion`](../src/PalitoLauncher.Core/Versioning/GameVersion.cs),
-  [`RoadmapLogic`](../src/PalitoLauncher.Core/State/RoadmapLogic.cs)): reciben datos y devuelven una respuesta. Son las
+  ([`LauncherStateLogic`](../../src/PalitoLauncher.Core/State/LauncherStateLogic.cs),
+  [`ReleaseSelector`](../../src/PalitoLauncher.Core/GitHub/ReleaseSelector.cs),
+  [`GameVersion`](../../src/PalitoLauncher.Core/Versioning/GameVersion.cs),
+  [`RoadmapLogic`](../../src/PalitoLauncher.Core/State/RoadmapLogic.cs)): reciben datos y devuelven una respuesta. Son las
   más fáciles de leer y de probar.
 
 ### Convenciones del Core
 
 - Nada de WPF. `ConfigureAwait(false)` en los `await` (el Core no necesita volver a ningún hilo concreto).
-- Errores esperables → [`LauncherException`](../src/PalitoLauncher.Core/Util/LauncherException.cs) con mensaje en
+- Errores esperables → [`LauncherException`](../../src/PalitoLauncher.Core/Util/LauncherException.cs) con mensaje en
   español. Los métodos que nunca deben fallar lo dicen en su documentación («Nunca lanza») y capturan todo.
 - La documentación XML (`/// <summary>`) de cada método **es su especificación**: describe qué hace en cada caso.
   Antes de cambiar un método, léela; si cambias el comportamiento, actualízala.
@@ -125,56 +125,56 @@ Las flechas van en un solo sentido: **el Core no sabe que existe una ventana**. 
 
 ## 3. Mapa de carpetas
 
-### Core ([`src/PalitoLauncher.Core`](../src/PalitoLauncher.Core))
+### Core ([`src/PalitoLauncher.Core`](../../src/PalitoLauncher.Core))
 
 | Carpeta / archivo | Responsabilidad | Clases principales |
 |---|---|---|
-| [`LauncherConfig.cs`](../src/PalitoLauncher.Core/LauncherConfig.cs) | Configuración fija: repos, nombre del exe del juego, patrones de assets, URLs, intervalos | `LauncherConfig` |
-| [`AppPaths.cs`](../src/PalitoLauncher.Core/AppPaths.cs) | Rutas de datos (`%LOCALAPPDATA%\PalitoLauncher`, carpeta de instalación por defecto…) | `AppPaths` |
-| [`GitHub/`](../src/PalitoLauncher.Core/GitHub) | Cliente de la API con caché, ETag, límite de consultas y modo sin conexión; modelos; selección de builds | `GitHubClient`, `ReleaseSelector`, `ReleaseInfo`, `ReleaseAsset`, `GameRelease`, `MilestoneInfo` |
-| [`Versioning/`](../src/PalitoLauncher.Core/Versioning) | Versión a partir del nombre del asset / tag / título, y su orden | `GameVersion` |
-| [`Downloads/`](../src/PalitoLauncher.Core/Downloads) | Descarga reanudable con reintentos y verificación SHA-256 | `FileDownloader`, `DownloadRequest`, `DownloadProgress` |
-| [`Install/`](../src/PalitoLauncher.Core/Install) | Instalar/actualizar/reparar/mover/desinstalar con intercambio seguro; extracción de .zip/.rar/.7z; marcador de versión | `GameInstaller`, `ArchiveExtractor`, `InstalledGameInfo`, `InstallStatus`, `InstallProgress` |
-| [`Launch/`](../src/PalitoLauncher.Core/Launch) | Lanzar el juego y seguir su proceso | `GameProcessManager` |
-| [`Update/`](../src/PalitoLauncher.Core/Update) | Auto-instalación del exe y auto-actualización del launcher | `LauncherInstallation`, `LauncherSelfUpdater` |
-| [`State/`](../src/PalitoLauncher.Core/State) | Lógica pura de decisión: estado del botón principal y roadmap | `LauncherStateLogic`, `RoadmapLogic` |
-| [`Feedback/`](../src/PalitoLauncher.Core/Feedback) | Encuesta (remota / local / por defecto) y envío a Discord con bandeja de salida | `SurveyProvider`, `FeedbackService`, `SurveyDefinition` |
-| [`Settings/`](../src/PalitoLauncher.Core/Settings) | Ajustes del usuario en `settings.json` | `LauncherSettings`, `SettingsStore` |
-| [`Logging/`](../src/PalitoLauncher.Core/Logging) | Log de archivo que nunca lanza | `Log` |
-| [`Diagnostics/`](../src/PalitoLauncher.Core/Diagnostics) | Zip «informe para el desarrollador» y resumen del entorno | `DiagnosticReport` |
-| [`Net/`](../src/PalitoLauncher.Core/Net) | `HttpClient` compartido con el User-Agent que exige GitHub | `HttpFactory` |
-| [`Util/`](../src/PalitoLauncher.Core/Util) | Sistema de archivos (escritura atómica, mover con reintentos, validar carpetas), accesos directos, excepción de usuario | `FileSystemUtil`, `ShortcutUtil`, `LauncherException` |
+| [`LauncherConfig.cs`](../../src/PalitoLauncher.Core/LauncherConfig.cs) | Configuración fija: repos, nombre del exe del juego, patrones de assets, URLs, intervalos | `LauncherConfig` |
+| [`AppPaths.cs`](../../src/PalitoLauncher.Core/AppPaths.cs) | Rutas de datos (`%LOCALAPPDATA%\PalitoLauncher`, carpeta de instalación por defecto…) | `AppPaths` |
+| [`GitHub/`](../../src/PalitoLauncher.Core/GitHub) | Cliente de la API con caché, ETag, límite de consultas y modo sin conexión; modelos; selección de builds | `GitHubClient`, `ReleaseSelector`, `ReleaseInfo`, `ReleaseAsset`, `GameRelease`, `MilestoneInfo` |
+| [`Versioning/`](../../src/PalitoLauncher.Core/Versioning) | Versión a partir del nombre del asset / tag / título, y su orden | `GameVersion` |
+| [`Downloads/`](../../src/PalitoLauncher.Core/Downloads) | Descarga reanudable con reintentos y verificación SHA-256 | `FileDownloader`, `DownloadRequest`, `DownloadProgress` |
+| [`Install/`](../../src/PalitoLauncher.Core/Install) | Instalar/actualizar/reparar/mover/desinstalar con intercambio seguro; extracción de .zip/.rar/.7z; marcador de versión | `GameInstaller`, `ArchiveExtractor`, `InstalledGameInfo`, `InstallStatus`, `InstallProgress` |
+| [`Launch/`](../../src/PalitoLauncher.Core/Launch) | Lanzar el juego y seguir su proceso | `GameProcessManager` |
+| [`Update/`](../../src/PalitoLauncher.Core/Update) | Auto-instalación del exe y auto-actualización del launcher | `LauncherInstallation`, `LauncherSelfUpdater` |
+| [`State/`](../../src/PalitoLauncher.Core/State) | Lógica pura de decisión: estado del botón principal y roadmap | `LauncherStateLogic`, `RoadmapLogic` |
+| [`Feedback/`](../../src/PalitoLauncher.Core/Feedback) | Encuesta (remota / local / por defecto) y envío a Discord con bandeja de salida | `SurveyProvider`, `FeedbackService`, `SurveyDefinition` |
+| [`Settings/`](../../src/PalitoLauncher.Core/Settings) | Ajustes del usuario en `settings.json` | `LauncherSettings`, `SettingsStore` |
+| [`Logging/`](../../src/PalitoLauncher.Core/Logging) | Log de archivo que nunca lanza | `Log` |
+| [`Diagnostics/`](../../src/PalitoLauncher.Core/Diagnostics) | Zip «informe para el desarrollador» y resumen del entorno | `DiagnosticReport` |
+| [`Net/`](../../src/PalitoLauncher.Core/Net) | `HttpClient` compartido con el User-Agent que exige GitHub | `HttpFactory` |
+| [`Util/`](../../src/PalitoLauncher.Core/Util) | Sistema de archivos (escritura atómica, mover con reintentos, validar carpetas), accesos directos, excepción de usuario | `FileSystemUtil`, `ShortcutUtil`, `LauncherException` |
 
-### UI ([`src/PalitoLauncher`](../src/PalitoLauncher))
+### UI ([`src/PalitoLauncher`](../../src/PalitoLauncher))
 
 | Carpeta / archivo | Responsabilidad |
 |---|---|
-| [`App.xaml.cs`](../src/PalitoLauncher/App.xaml.cs) | Arranque, instancia única, manejadores globales de errores, vuelta atrás si una actualización no abre |
-| [`MainWindow.xaml`](../src/PalitoLauncher/MainWindow.xaml) / [`.cs`](../src/PalitoLauncher/MainWindow.xaml.cs) | Ventana sin borde (`WindowChrome`): barra de título, navegación, páginas, barra de acción, overlay de diálogos. El code-behind solo tiene lógica de vista (tamaño, teclado, confirmación al cerrar) |
-| [`ViewModels/`](../src/PalitoLauncher/ViewModels) | Estado y comandos. `MainViewModel` está partido en cinco archivos: [`MainViewModel.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.cs) (estado y presentación), [`.Startup.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Startup.cs) (arranque, consultas, eventos del juego), [`.Operations.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Operations.cs) (acciones del usuario y operaciones largas), [`.Roadmap.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) y [`.Feedback.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Feedback.cs) |
-| [`Views/`](../src/PalitoLauncher/Views) | Páginas (`HomeView`, `VersionsView`, `RoadmapView`, `SettingsView`) y diálogos (`MessageDialogView`, `InstallDialogView`, `SurveyDialogView`); control propio `StarRating` |
-| [`Services/`](../src/PalitoLauncher/Services) | `DialogService` (diálogos dentro de la ventana), `SingleInstance`, `ShellService` (abrir carpetas/URLs), `NativeMethods` (parpadeo de la barra de tareas) |
-| [`Helpers/`](../src/PalitoLauncher/Helpers) | `MarkdownRenderer` (notas → `FlowDocument`), `UiFormat` (bytes, fechas…), `AppInfo`, `LiveRegion`, `ScrollHelper`, `UiAssist` |
-| [`Converters/`](../src/PalitoLauncher/Converters) | Conversores de binding (bool → visibilidad, null → visibilidad, negación) |
-| [`Themes/Theme.xaml`](../src/PalitoLauncher/Themes/Theme.xaml) | Paleta, fuentes, conversores y estilos de todos los controles |
-| [`Assets/`](../src/PalitoLauncher/Assets) | Logo e icono (se regeneran con [`scripts/generate-icons.ps1`](../scripts/generate-icons.ps1)) |
+| [`App.xaml.cs`](../../src/PalitoLauncher/App.xaml.cs) | Arranque, instancia única, manejadores globales de errores, vuelta atrás si una actualización no abre |
+| [`MainWindow.xaml`](../../src/PalitoLauncher/MainWindow.xaml) / [`.cs`](../../src/PalitoLauncher/MainWindow.xaml.cs) | Ventana sin borde (`WindowChrome`): barra de título, navegación, páginas, barra de acción, overlay de diálogos. El code-behind solo tiene lógica de vista (tamaño, teclado, confirmación al cerrar) |
+| [`ViewModels/`](../../src/PalitoLauncher/ViewModels) | Estado y comandos. `MainViewModel` está partido en cinco archivos: [`MainViewModel.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.cs) (estado y presentación), [`.Startup.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Startup.cs) (arranque, consultas, eventos del juego), [`.Operations.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Operations.cs) (acciones del usuario y operaciones largas), [`.Roadmap.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Roadmap.cs) y [`.Feedback.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Feedback.cs) |
+| [`Views/`](../../src/PalitoLauncher/Views) | Páginas (`HomeView`, `VersionsView`, `RoadmapView`, `SettingsView`) y diálogos (`MessageDialogView`, `InstallDialogView`, `SurveyDialogView`); control propio `StarRating` |
+| [`Services/`](../../src/PalitoLauncher/Services) | `DialogService` (diálogos dentro de la ventana), `SingleInstance`, `ShellService` (abrir carpetas/URLs), `NativeMethods` (parpadeo de la barra de tareas) |
+| [`Helpers/`](../../src/PalitoLauncher/Helpers) | `MarkdownRenderer` (notas → `FlowDocument`), `UiFormat` (bytes, fechas…), `AppInfo`, `LiveRegion`, `ScrollHelper`, `UiAssist` |
+| [`Converters/`](../../src/PalitoLauncher/Converters) | Conversores de binding (bool → visibilidad, null → visibilidad, negación) |
+| [`Themes/Theme.xaml`](../../src/PalitoLauncher/Themes/Theme.xaml) | Paleta, fuentes, conversores y estilos de todos los controles |
+| [`Assets/`](../../src/PalitoLauncher/Assets) | Logo e icono (se regeneran con [`scripts/generate-icons.ps1`](../../scripts/generate-icons.ps1)) |
 
 ### Resto del repo
 
 | Ruta | Qué es |
 |---|---|
-| [`tests/PalitoLauncher.Tests/`](../tests/PalitoLauncher.Tests) | Un archivo de tests por clase del Core (`GameInstallerTests.cs`, `GitHubClientTests.cs`…) y ayudantes en `TestHelpers/` |
-| [`tests/PalitoLauncher.UI.Tests/`](../tests/PalitoLauncher.UI.Tests) | Tests de la UI; el hilo de WPF compartido está en `TestHelpers/WpfHost.cs` |
-| [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | Compila y pasa los tests en cada push / pull request a `main` |
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | Publica una versión del launcher al subir un tag `v*` |
-| [`scripts/publish.ps1`](../scripts/publish.ps1) | Publica el exe en local (lo mismo que el workflow) |
-| [`docs/`](.) | Esta documentación |
+| [`tests/PalitoLauncher.Tests/`](../../tests/PalitoLauncher.Tests) | Un archivo de tests por clase del Core (`GameInstallerTests.cs`, `GitHubClientTests.cs`…) y ayudantes en `TestHelpers/` |
+| [`tests/PalitoLauncher.UI.Tests/`](../../tests/PalitoLauncher.UI.Tests) | Tests de la UI; el hilo de WPF compartido está en `TestHelpers/WpfHost.cs` |
+| [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) | Compila y pasa los tests en cada push / pull request a `main` |
+| [`.github/workflows/release.yml`](../../.github/workflows/release.yml) | Publica una versión del launcher al subir un tag `v*` |
+| [`scripts/publish.ps1`](../../scripts/publish.ps1) | Publica el exe en local (lo mismo que el workflow) |
+| [`docs/`](..) | Esta documentación |
 
 ---
 
 ## 4. Quién es dueño de qué en tiempo de ejecución
 
-El [`MainViewModel`](../src/PalitoLauncher/ViewModels/MainViewModel.cs) es el **único dueño** de las instancias del
+El [`MainViewModel`](../../src/PalitoLauncher/ViewModels/MainViewModel.cs) es el **único dueño** de las instancias del
 Core. No hay contenedor de inyección de dependencias: se crean en su constructor y viven lo que vive la ventana.
 
 ```csharp
@@ -219,8 +219,8 @@ proceso del juego, peticiones de otra instancia) se pasa al hilo de UI con `Disp
 
 ## 5. Arranque
 
-Archivos: [`App.xaml.cs`](../src/PalitoLauncher/App.xaml.cs) (`OnStartup`) y
-[`MainViewModel.Startup.cs`](../src/PalitoLauncher/ViewModels/MainViewModel.Startup.cs) (`InitializeAsync`).
+Archivos: [`App.xaml.cs`](../../src/PalitoLauncher/App.xaml.cs) (`OnStartup`) y
+[`MainViewModel.Startup.cs`](../../src/PalitoLauncher/ViewModels/MainViewModel.Startup.cs) (`InitializeAsync`).
 
 ```mermaid
 sequenceDiagram
@@ -292,9 +292,9 @@ operación (la descarga queda en pausa) y se guardan los ajustes.
 
 ## 6. Instalar y actualizar el juego
 
-Archivos: [`GameInstaller.cs`](../src/PalitoLauncher.Core/Install/GameInstaller.cs),
-[`FileDownloader.cs`](../src/PalitoLauncher.Core/Downloads/FileDownloader.cs),
-[`ArchiveExtractor.cs`](../src/PalitoLauncher.Core/Install/ArchiveExtractor.cs). Desde la UI se llega por
+Archivos: [`GameInstaller.cs`](../../src/PalitoLauncher.Core/Install/GameInstaller.cs),
+[`FileDownloader.cs`](../../src/PalitoLauncher.Core/Downloads/FileDownloader.cs),
+[`ArchiveExtractor.cs`](../../src/PalitoLauncher.Core/Install/ArchiveExtractor.cs). Desde la UI se llega por
 `MainViewModel.InstallBodyAsync` (en `MainViewModel.Operations.cs`).
 
 ### Estructura en disco de una instalación
@@ -470,7 +470,7 @@ Otros detalles:
 
 ## 8. GitHub: caché y límite de consultas
 
-Archivo: [`GitHubClient.cs`](../src/PalitoLauncher.Core/GitHub/GitHubClient.cs). Su `<summary>` de clase resume todas
+Archivo: [`GitHubClient.cs`](../../src/PalitoLauncher.Core/GitHub/GitHubClient.cs). Su `<summary>` de clase resume todas
 las reglas; aquí va el porqué.
 
 ### El presupuesto
@@ -539,7 +539,7 @@ Además:
 | Encuesta remota | `...\cache\feedback.json` (+ `.meta.json`) | `GitHubClient.GetCachedTextFileAsync` | Solo se guarda si es válida |
 | Última comprobación del launcher | `...\cache\launcher-update-check.json` | `LauncherSelfUpdater` | Para el intervalo de 2 h |
 | Opiniones pendientes | `...\PalitoLauncher\feedback\outbox\<fecha>-<id>.json` | `FeedbackService` | Se borran al confirmar Discord; las rechazadas van a `outbox\failed\` |
-| Encuesta de pruebas (manual) | `...\PalitoLauncher\feedback.local.json` | Tú, a mano | Tiene prioridad sobre la remota (ver [FEEDBACK.md](FEEDBACK.md)) |
+| Encuesta de pruebas (manual) | `...\PalitoLauncher\feedback.local.json` | Tú, a mano | Tiene prioridad sobre la remota (ver [FEEDBACK.md](../remoto/FEEDBACK.md)) |
 | El juego | `<InstallRoot>\game\` + `palito_install.json` | `GameInstaller` | Por defecto `%LOCALAPPDATA%\PalitoGames\Coop2D` |
 | Área de trabajo | `<InstallRoot>\.launcher\` | `GameInstaller` | Descargas, staging, diario… (ver [sección 6](#6-instalar-y-actualizar-el-juego)) |
 | El launcher | `%LOCALAPPDATA%\Programs\PalitoLauncher\PalitoLauncher.exe` | `LauncherInstallation` | Durante una actualización aparecen `.new`, `.old`, `.failed`, `.new.part` |
@@ -552,14 +552,14 @@ Además hay objetos con nombre del sistema (no son archivos): el mutex `Local\Pa
 (auto-actualización).
 
 > La 1.0.5 añade `launcher.local.json`, la caché de `launcher.json` y una bandeja de reportes de problemas. Están
-> descritas en [LAUNCHER-JSON.md](LAUNCHER-JSON.md).
+> descritas en [LAUNCHER-JSON.md](../remoto/LAUNCHER-JSON.md).
 
 ---
 
 ## 10. Máquina de estados del botón principal
 
 El estado de la pantalla lo decide **una función pura**: `LauncherStateLogic.ComputeState`
-([`LauncherStateLogic.cs`](../src/PalitoLauncher.Core/State/LauncherStateLogic.cs)). Recibe un `LauncherStateInput`
+([`LauncherStateLogic.cs`](../../src/PalitoLauncher.Core/State/LauncherStateLogic.cs)). Recibe un `LauncherStateInput`
 (estado del disco, releases, si falló la consulta, si hay operación, si el juego está abierto) y devuelve un
 `LauncherState`. La precedencia es:
 
@@ -630,7 +630,7 @@ activo, el estado es `UpdateAvailable`, el juego no está abierto y la última n
 | `LauncherException` en una acción del usuario | Diálogo con su mensaje + botón «Crear informe» | `MainViewModel.HandleExceptionAsync` |
 | `LauncherException` en algo automático (auto-actualización, comprobación periódica) | Aviso secundario en la barra de acción (descartable), sin diálogo | `HandleExceptionAsync` con `automatic: true` |
 | Cualquier otra excepción | Mensaje genérico («Algo salió mal…») + «Crear informe»; el detalle va al log | `HandleExceptionAsync` / `MainViewModel.GenericErrorMessage` |
-| Excepción que escapa de un comando | Igual que la anterior | `CommandErrors.Handle` (en [`RelayCommand.cs`](../src/PalitoLauncher/ViewModels/RelayCommand.cs)) |
+| Excepción que escapa de un comando | Igual que la anterior | `CommandErrors.Handle` (en [`RelayCommand.cs`](../../src/PalitoLauncher/ViewModels/RelayCommand.cs)) |
 | Excepción no controlada en la interfaz | Igual; la app sigue viva (`e.Handled = true`) | `App.OnDispatcherUnhandledException` |
 | La ventana no llega a crearse | `MessageBox` y un informe en el Escritorio | `App.ShowStartupFailure` |
 
@@ -639,7 +639,7 @@ error de una operación automática > aviso del estado (p. ej. unidad que falta)
 > «Comprobando actualizaciones…». Está en `MainViewModel.UpdateNotice`.
 
 Los diálogos no son ventanas aparte: son un **overlay dentro de la ventana** gestionado por
-[`DialogService`](../src/PalitoLauncher/Services/DialogService.cs) (uno a la vez; Esc = botón secundario; Enter =
+[`DialogService`](../../src/PalitoLauncher/Services/DialogService.cs) (uno a la vez; Esc = botón secundario; Enter =
 primario salvo en diálogos peligrosos). Los mensajes breves de éxito son **toasts** (`MainViewModel.ShowToast`).
 
 ---

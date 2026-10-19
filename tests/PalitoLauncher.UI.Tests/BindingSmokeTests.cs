@@ -141,6 +141,7 @@ public sealed class BindingSmokeTests
             AssertShowsText(root, "Reportar un problema");
             AssertShowsText(root, "Herramientas de desarrollo");
             AssertShowsText(root, "Abrir otra instancia del juego");
+            AssertShowsText(root, "Ofuscar un webhook");             // 1.0.7: herramienta de desarrollo
             AssertShowsText(root, "Mostrar las misiones de prueba");
             AssertShowsText(root, vm.Settings.PendingMissionsText);
             AssertShowsText(root, "Tu nombre en Discord (opcional)");

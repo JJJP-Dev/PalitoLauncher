@@ -150,10 +150,10 @@ public sealed class MissionsProviderTests
     [Fact]
     public void Parse_DocsExampleFile_IsAcceptedWithoutDowngrades()
     {
-        // docs/missions.example.json tiene que ser válido y ninguna misión automática puede acabar como manual.
+        // docs/ejemplos/missions.example.json tiene que ser válido y ninguna misión automática puede acabar como manual.
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "PalitoLauncher.sln"))) dir = dir.Parent;
-        var example = dir is null ? null : Path.Combine(dir.FullName, "docs", "missions.example.json");
+        var example = dir is null ? null : Path.Combine(dir.FullName, "docs", "ejemplos", "missions.example.json");
         if (example is null || !File.Exists(example)) return;
 
         var set = MissionsProvider.Parse(File.ReadAllText(example));

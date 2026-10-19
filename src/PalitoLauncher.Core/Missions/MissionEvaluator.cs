@@ -22,7 +22,7 @@ public sealed class MissionEvaluation
 /// Aplica las sesiones del juego (eventos de Player.log) a las misiones de un conjunto. Puro y determinista: no hace E/S
 /// y solo modifica el <see cref="MissionSetState"/> que recibe.
 ///
-/// Reglas (docs/MISIONES.md, sección 4): cada sesión se procesa una vez (GameSession.Key); solo cuentan las que arrancaron
+/// Reglas (docs/remoto/MISIONES.md, sección 4): cada sesión se procesa una vez (GameSession.Key); solo cuentan las que arrancaron
 /// dentro de la ventana del conjunto (desde StartsUtc, o desde que el launcher vio el conjunto, hasta EndsUtc) y con una
 /// versión ≥ MinGameVersion. Una partida va de match_joined a match_left; desde el primer cheat_used de una partida, sus
 /// eventos están «con trucos» y no cuentan para las misiones sin AllowCheats. AllowSolo = false exige que en esa partida

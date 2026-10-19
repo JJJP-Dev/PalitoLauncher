@@ -7,7 +7,7 @@ using PalitoLauncher.Core.Versioning;
 namespace PalitoLauncher.Core.Missions;
 
 /// <summary>
-/// Un evento que el juego escribió en su Player.log (contrato v1, docs/EVENTOS-JUEGO.md):
+/// Un evento que el juego escribió en su Player.log (contrato v1, docs/juego/EVENTOS-JUEGO.md):
 /// <c>[PalitoEvent] v=1 seq=42 t=318.412 ev=reaction variant=vapor_fire_water duo=true me=detonator targets=3</c>.
 /// </summary>
 public sealed class GameEvent

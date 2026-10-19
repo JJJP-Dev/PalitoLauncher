@@ -156,7 +156,7 @@ Problemas típicos:
 
 ## Para el desarrollador
 
-Documentación completa (arquitectura, guía del código, feedback, roadmap y tareas manuales): **[docs/README.md](docs/README.md)**.
+Documentación completa, organizada por carpetas (código, operación, configuración remota, juego y ejemplos): **[docs/README.md](docs/README.md)**.
 
 ### Resumen
 
@@ -165,7 +165,7 @@ Documentación completa (arquitectura, guía del código, feedback, roadmap y ta
 - La **versión sale del nombre del asset** (`2D_0.0.3_Prototype2.zip` en pre-producción, `2D_0.1.0.zip` en
   producción); si no tiene, del tag y luego del título. Hay actualización si la versión sube; hay **revisión** si la
   versión es la misma pero cambia el SHA-256 del archivo (re-subiste el zip). Nunca se baja de versión automáticamente.
-- Cómo nombrar y publicar las builds del juego: **[docs/PUBLICAR.md](docs/PUBLICAR.md)**.
+- Cómo nombrar y publicar las builds del juego: **[docs/operacion/PUBLICAR.md](docs/operacion/PUBLICAR.md)**.
 
 ### Fondo remoto
 
@@ -193,19 +193,20 @@ La página **Roadmap** y la tarjeta «En desarrollo» de Inicio salen de los **m
 ### Encuesta y opiniones
 
 **Enviar opinión** y la invitación al cerrar el juego publican las respuestas en un canal de Discord mediante un
-webhook. Las preguntas y el webhook se configuran en `launcher/feedback.json` de la rama `main` de Coop2D, sin sacar
-versión del launcher; sin ese archivo se usa una encuesta por defecto y las respuestas esperan en una bandeja de salida
+webhook. Las preguntas y el webhook (**ofuscado**, `pw1:…`, desde la 1.0.7: hay bots que buscan webhooks en GitHub para
+mandar spam; se genera en Ajustes → Herramientas de desarrollo) se configuran en `launcher/feedback.json` de la rama
+`main` de Coop2D, sin sacar versión del launcher; sin ese archivo se usa una encuesta por defecto y las respuestas esperan en una bandeja de salida
 en cada PC. Cómo crear el webhook, el formato del JSON, cómo probarlo y qué llega a Discord:
-**[docs/FEEDBACK.md](docs/FEEDBACK.md)** (ejemplo listo para copiar en
-[docs/feedback.example.json](docs/feedback.example.json)).
+**[docs/remoto/FEEDBACK.md](docs/remoto/FEEDBACK.md)** (ejemplo listo para copiar en
+[docs/ejemplos/feedback.example.json](docs/ejemplos/feedback.example.json)).
 
 ### Misiones de prueba (1.0.6)
 
 Retos para los playtests definidos en `launcher/missions.json` de Coop2D. El launcher pasa `-palitoSession <id>` al
 juego, lee al cerrarlo las líneas `[PalitoEvent]` que el juego escribe en su `Player.log`, marca las misiones cumplidas
 y publica los resultados de cada jugador en Discord (webhook de `feedback.json`). Referencia:
-**[docs/MISIONES.md](docs/MISIONES.md)**; contrato de eventos con el juego: **[docs/EVENTOS-JUEGO.md](docs/EVENTOS-JUEGO.md)**;
-ejemplo: [docs/missions.example.json](docs/missions.example.json).
+**[docs/remoto/MISIONES.md](docs/remoto/MISIONES.md)**; contrato de eventos con el juego: **[docs/juego/EVENTOS-JUEGO.md](docs/juego/EVENTOS-JUEGO.md)**;
+ejemplo: [docs/ejemplos/missions.example.json](docs/ejemplos/missions.example.json).
 
 ### Publicar una versión del launcher
 
@@ -280,7 +281,9 @@ src/
     Launch/                    lanzar y vigilar el proceso del juego
     Update/                    auto-actualización y auto-instalación del launcher
     State/                     lógica de estados de la pantalla (qué hace el botón principal) y del roadmap
-    Feedback/                  encuesta (remota/local/por defecto) y envío de opiniones a Discord con bandeja de salida
+    Feedback/                  encuesta, opiniones y reportes a Discord con bandeja de salida; webhooks ofuscados (pw1)
+    Remote/                    launcher.json (anuncios, builds con problemas, sesiones de prueba…)
+    Missions/                  misiones de prueba: missions.json, eventos del juego en Player.log y resultados
     Settings/ Logging/ Diagnostics/ Net/ Util/
   PalitoLauncher/              interfaz WPF (MVVM hecho a mano)
     Assets/ Themes/ Views/ ViewModels/ Services/ Helpers/ Converters/
@@ -288,8 +291,12 @@ tests/PalitoLauncher.Tests/    tests xUnit (sin red, salvo IntegrationTests)
 tests/PalitoLauncher.UI.Tests/ tests de la capa WPF: ViewModels, MarkdownRenderer y errores de binding de todas las
                                vistas (hilo STA propio, sin mostrar ventanas, sin red, datos en %TEMP%)
 scripts/                       publish.ps1, generate-icons.ps1
-docs/PUBLICAR.md               guía para publicar builds del juego
-docs/FEEDBACK.md               encuesta de opiniones: webhook de Discord y launcher/feedback.json (+ feedback.example.json)
+docs/                          documentación (índice: docs/README.md)
+  codigo/                      arquitectura y guía del código
+  operacion/                   tareas manuales y cómo publicar builds del juego
+  remoto/                      feedback.json, launcher.json, missions.json y roadmap (repo del juego)
+  juego/                       contrato de eventos con Coop2D
+  ejemplos/                    JSON de ejemplo listos para copiar
 .github/workflows/             ci.yml, release.yml
 ```
 
@@ -310,7 +317,7 @@ arranque normal gasta 2 peticiones: releases y roadmap (este, como mucho una vez
 ### Solución de problemas
 
 - **Una build nueva no aparece**: revisa que el asset se llame `2D_….zip` y que su versión sea mayor que la anterior
-  (ver [docs/PUBLICAR.md](docs/PUBLICAR.md)), que la release no sea un borrador y que, si está marcada como pre-release,
+  (ver [docs/operacion/PUBLICAR.md](docs/operacion/PUBLICAR.md)), que la release no sea un borrador y que, si está marcada como pre-release,
   el amigo tenga activado «Incluir versiones de prueba». Luego **⋯ → Buscar actualizaciones** (las respuestas se
   reutilizan durante 60 s).
 - **Límite de consultas mientras pruebas**: cada arranque y cada «Buscar actualizaciones» gasta cupo. Espera a la hora de

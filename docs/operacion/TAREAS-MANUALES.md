@@ -4,8 +4,8 @@ El launcher hace solo casi todo (instalar, actualizar, reintentar, enviar opinio
 cuentas de Discord y GitHub y que ningún programa (ni una IA) puede hacer por ti. Esta es la lista, con pasos numerados.
 Marca las casillas a medida que las hagas.
 
-> Índice de toda la documentación: [docs/README.md](README.md). Detalle de las opiniones: [FEEDBACK.md](FEEDBACK.md).
-> Publicar builds del juego: [PUBLICAR.md](PUBLICAR.md). Roadmap: [ROADMAP.md](ROADMAP.md).
+> Índice de toda la documentación: [docs/README.md](../README.md). Detalle de las opiniones: [FEEDBACK.md](../remoto/FEEDBACK.md).
+> Publicar builds del juego: [PUBLICAR.md](PUBLICAR.md). Roadmap: [ROADMAP.md](../remoto/ROADMAP.md).
 
 ## Resumen
 
@@ -50,7 +50,7 @@ entrar en la sala») se leen y se gestionan distinto; separados, los bugs no se 
 - [ ] 3. Crea el canal **`bugs`** igual.
 - [ ] 4. Webhook de `#feedback`: rueda dentada del canal (**Editar canal**) → **Integraciones** → **Webhooks** →
       **Nuevo webhook** → púlsalo → (opcional) nombre e imagen → **Copiar URL de webhook** → **Guardar cambios**.
-      Detalle y comprobación con PowerShell: [FEEDBACK.md, paso 2](FEEDBACK.md#paso-2-crear-el-webhook).
+      Detalle y comprobación con PowerShell: [FEEDBACK.md, paso 2](../remoto/FEEDBACK.md#paso-2-crear-el-webhook).
 - [ ] 5. Webhook de `#bugs`: lo mismo en el canal `#bugs`.
 - [ ] 6. Apunta en una nota privada qué URL es de qué canal (la de `#feedback` irá en `feedback.json` y la de `#bugs` en
       `launcher.json`).
@@ -67,8 +67,9 @@ entrar en la sala») se leen y se gestionan distinto; separados, los bugs no se 
 
 Sin este archivo, el launcher usa una encuesta por defecto y guarda las respuestas en cada PC hasta que haya webhook.
 
-- [ ] 1. Copia [`docs/feedback.example.json`](feedback.example.json) como `feedback.json` y pon la URL del webhook de
-      `#feedback` en `discordWebhookUrl`. Ajusta preguntas e `id` si quieres ([FEEDBACK.md](FEEDBACK.md#cambiar-las-preguntas)).
+- [ ] 1. Copia [`docs/ejemplos/feedback.example.json`](../ejemplos/feedback.example.json) como `feedback.json` y pon en `discordWebhookUrl`
+      el webhook de `#feedback` **ofuscado** (`pw1:…`: Ajustes → Herramientas de desarrollo → Ofuscar un webhook; nunca
+      la URL tal cual, la encuentran bots de spam). Ajusta preguntas e `id` si quieres ([FEEDBACK.md](../remoto/FEEDBACK.md#cambiar-las-preguntas)).
 - [ ] 2. Pruébalo en tu PC: cópialo a `%LOCALAPPDATA%\PalitoLauncher\feedback.local.json`, reinicia el launcher, envía
       una opinión con **Enviar opinión** y comprueba que llega a `#feedback`.
 - [ ] 3. Publícalo: GitHub → repo Coop2D → **Add file → Create new file** → nombre `launcher/feedback.json` → pega el
@@ -77,7 +78,7 @@ Sin este archivo, el launcher usa una encuesta por defecto y guarda las respuest
 - [ ] 4. Borra tu `feedback.local.json` y reinicia el launcher: en el log (`%LOCALAPPDATA%\PalitoLauncher\logs`) debe
       salir `Encuesta de feedback: «…» (N preguntas, webhook: discord.com/api/webhooks/…/***)`.
 
-Guía completa, con un ejemplo de lo que sale en Discord y problemas típicos: [FEEDBACK.md](FEEDBACK.md#guía-paso-a-paso-que-las-opiniones-lleguen-a-tu-discord).
+Guía completa, con un ejemplo de lo que sale en Discord y problemas típicos: [FEEDBACK.md](../remoto/FEEDBACK.md#guía-paso-a-paso-que-las-opiniones-lleguen-a-tu-discord).
 
 ## 3. Publicar launcher/launcher.json
 
@@ -87,7 +88,7 @@ datos para hostear partida y el webhook de **Reportar un problema**. Hoy no exis
 los launchers 1.0.4 o anteriores simplemente no lo leen.
 
 > **Plantilla provisional.** La referencia completa y definitiva de cada campo está en
-> [LAUNCHER-JSON.md](LAUNCHER-JSON.md). Si algo de aquí no coincide con ella, manda LAUNCHER-JSON.md.
+> [LAUNCHER-JSON.md](../remoto/LAUNCHER-JSON.md). Si algo de aquí no coincide con ella, manda LAUNCHER-JSON.md.
 
 Plantilla mínima (anuncio de bienvenida + enlace de Discord + una sesión de ejemplo + webhook de `#bugs`):
 
@@ -118,14 +119,14 @@ Plantilla mínima (anuncio de bienvenida + enlace de Discord + una sesión de ej
       "discordUrl": "https://discord.gg/TU_INVITACION"
     }
   ],
-  "bugReportWebhookUrl": "https://discord.com/api/webhooks/PEGA_AQUI_LA_URL_DEL_WEBHOOK_DE_BUGS"
+  "bugReportWebhookUrl": "pw1:PEGA_AQUI_EL_WEBHOOK_DE_BUGS_OFUSCADO"
 }
 ```
 
 Qué cambiar antes de publicarla:
 
 - `https://discord.gg/TU_INVITACION` → tu invitación permanente ([punto 1](#1-discord-canales-y-webhooks), paso 8).
-- `bugReportWebhookUrl` → la URL del webhook de `#bugs`. Si la dejas así (no es válida) o la quitas, los reportes usan
+- `bugReportWebhookUrl` → el webhook de `#bugs` ofuscado (`pw1:…`). Si la dejas así (no es válida) o la quitas, los reportes usan
   el webhook de `feedback.json`.
 - `playtests`: fecha y hora **con zona horaria**. En España: `+01:00` en invierno y `+02:00` en verano (el cambio es el
   último domingo de marzo y de octubre). Las sesiones ya pasadas no se muestran, así que puedes dejarlas o borrarlas.
@@ -174,16 +175,16 @@ Guía completa: [PUBLICAR.md](PUBLICAR.md). Resumen:
 - [ ] 4. En tu launcher: **Versiones → Actualizar lista** para comprobar que aparece.
 - [ ] 5. Si hay una sesión de prueba en `launcher.json` que la necesita, actualiza su `requiredVersion`.
 - [ ] 6. Si una build publicada tiene un fallo grave, no la borres: publica una corrección con número mayor (y, desde la
-      1.0.5, márcala en `blockedBuilds` de `launcher.json` para avisar a quien la tenga; ver [LAUNCHER-JSON.md](LAUNCHER-JSON.md)).
+      1.0.5, márcala en `blockedBuilds` de `launcher.json` para avisar a quien la tenga; ver [LAUNCHER-JSON.md](../remoto/LAUNCHER-JSON.md)).
 
 ## 6. Publicar una versión del launcher
 
 El launcher se publica en **JJJP-Dev/PalitoLauncher** con GitHub Actions
-([release.yml](../.github/workflows/release.yml)): al subir un tag `vX.Y.Z`, el workflow compila, ejecuta los tests y
+([release.yml](../../.github/workflows/release.yml)): al subir un tag `vX.Y.Z`, el workflow compila, ejecuta los tests y
 crea la release con **`PalitoLauncher.exe`**. Los launchers instalados la detectan solos.
 
 - [ ] 1. Comprueba que la CI de `main` está en verde: GitHub → PalitoLauncher → **Actions → CI**.
-- [ ] 2. Sube la versión en [`Directory.Build.props`](../Directory.Build.props) (`<Version>1.0.5</Version>`), haz commit
+- [ ] 2. Sube la versión en [`Directory.Build.props`](../../Directory.Build.props) (`<Version>1.0.5</Version>`), haz commit
       (p. ej. «Launcher 1.0.5: …») y `git push`. **Por qué:** el tag manda en la release, pero así las compilaciones
       locales llevan la misma versión.
 - [ ] 3. Crea y sube el tag: `git tag v1.0.5` y después `git push origin v1.0.5` (desde la carpeta del repo
@@ -218,7 +219,7 @@ ser la «última» y nadie más la descargue.
 
 - [ ] La build está publicada en el canal normal, probada en tu PC y sus notas dicen qué versión necesitan todos.
 - [ ] `launcher/feedback.json`: preguntas pensadas para lo que quieres averiguar en esta sesión y `id` nuevo si
-      cambiaron ([FEEDBACK.md](FEEDBACK.md#buenas-prácticas-para-encuestas-de-playtest)).
+      cambiaron ([FEEDBACK.md](../remoto/FEEDBACK.md#buenas-prácticas-para-encuestas-de-playtest)).
 - [ ] `launcher/launcher.json` (1.0.5): la sesión en `playtests` con fecha, hora con zona, `requiredVersion` y enlace de
       Discord; si quieres, un anuncio.
 - [ ] Probado todo en local (`feedback.local.json` / `launcher.local.json`), publicado por PR y **borrados los archivos
@@ -230,7 +231,7 @@ ser la «última» y nadie más la descargue.
 **Después:**
 
 - [ ] Lee `#feedback` y `#bugs`. Convierte cada fallo en una issue de Coop2D asignada al milestone que toque (así sale en
-      el [roadmap](ROADMAP.md)).
+      el [roadmap](../remoto/ROADMAP.md)).
 - [ ] Cierra las issues terminadas y, si el objetivo del milestone está cumplido, cierra el milestone.
 - [ ] Cuenta en las notas de la siguiente release qué cambiaste gracias a las opiniones.
 - [ ] Quita (o deja caducar con `endsUtc`) los anuncios que ya no sirvan.
@@ -241,8 +242,8 @@ Hay dos workflows en el repo PalitoLauncher:
 
 | Workflow | Cuándo se ejecuta | Qué hace |
 |---|---|---|
-| **CI** ([ci.yml](../.github/workflows/ci.yml)) | Cada push y pull request a `main` | Compila y ejecuta los tests |
-| **Release** ([release.yml](../.github/workflows/release.yml)) | Al subir un tag `v*` (o a mano: **Actions → Release → Run workflow**) | Compila, prueba, publica el exe y crea la release |
+| **CI** ([ci.yml](../../.github/workflows/ci.yml)) | Cada push y pull request a `main` | Compila y ejecuta los tests |
+| **Release** ([release.yml](../../.github/workflows/release.yml)) | Al subir un tag `v*` (o a mano: **Actions → Release → Run workflow**) | Compila, prueba, publica el exe y crea la release |
 
 **Paso a paso:**
 
@@ -293,9 +294,11 @@ alguien con permisos deja el equipo, o al cambiar de canal.
 
 - [ ] 1. Discord → canal → **Editar canal → Integraciones → Webhooks** → abre el webhook → **Eliminar webhook**. El spam
       se corta al momento.
-- [ ] 2. Crea uno nuevo ([punto 1](#1-discord-canales-y-webhooks), paso 4 o 5) y copia la URL.
-- [ ] 3. Cambia la URL en `launcher/feedback.json` (`discordWebhookUrl`) o en `launcher/launcher.json`
-      (`bugReportWebhookUrl`) con una PR.
+- [ ] 2. Crea uno nuevo ([punto 1](#1-discord-canales-y-webhooks), paso 4 o 5), copia la URL y ofúscala (Ajustes →
+      Herramientas de desarrollo → Ofuscar un webhook).
+- [ ] 3. Pon el valor `pw1:…` en `launcher/feedback.json` (`discordWebhookUrl`) o en `launcher/launcher.json`
+      (`bugReportWebhookUrl`) con una PR. **Nunca la URL en texto plano**: los bots que la buscan en GitHub la
+      encuentran en minutos.
 
 **Planificado (sin prisa):** crea primero el webhook nuevo, publica el JSON con la URL nueva, espera un día (a que los
 launchers lo recojan) y después borra el viejo.
@@ -306,7 +309,7 @@ la comprobación de cada hora, o con **Ajustes → Juego → Reintentar envío**
 
 ## 10. Mantenimiento de vez en cuando
 
-- [ ] **Milestones al día** en GitHub: cierra los terminados y revisa las fechas límite ([ROADMAP.md](ROADMAP.md)).
+- [ ] **Milestones al día** en GitHub: cierra los terminados y revisa las fechas límite ([ROADMAP.md](../remoto/ROADMAP.md)).
 - [ ] **`launcher.json` limpio**: quita anuncios caducados y sesiones pasadas (no molestan, pero el archivo se lee
       mejor).
 - [ ] **Webhooks vivos**: en Discord, **Integraciones → Webhooks** de cada canal; si borraste alguno, actualiza el JSON.
@@ -320,9 +323,9 @@ la comprobación de cada hora, o con **Ajustes → Juego → Reintentar envío**
 Hoy sois 4-5. Cuando el juego merezca grupos más grandes:
 
 - [ ] **Discord**: roles (p. ej. «Testers») y permisos por canal; un hilo por sesión de playtest en `#feedback` usando
-      `?thread_id=` en el webhook ([FEEDBACK.md](FEEDBACK.md#paso-2-crear-el-webhook)).
+      `?thread_id=` en el webhook ([FEEDBACK.md](../remoto/FEEDBACK.md#paso-2-crear-el-webhook)).
 - [ ] **Encuestas**: más preguntas cerradas y los mismos Ids entre versiones para poder comparar
-      ([FEEDBACK.md](FEEDBACK.md#buenas-prácticas-para-encuestas-de-playtest)).
+      ([FEEDBACK.md](../remoto/FEEDBACK.md#buenas-prácticas-para-encuestas-de-playtest)).
 - [ ] **Límite de GitHub**: el cupo de 60 consultas/hora se comparte por IP. En una LAN party con muchos PCs detrás del
       mismo router, el launcher sigue funcionando con su caché, pero «Buscar actualizaciones» puede decir que hay que
       esperar. Publica la build **antes** de la sesión, no durante.
@@ -336,10 +339,10 @@ Hoy sois 4-5. Cuando el juego merezca grupos más grandes:
 ## 12. Misiones de prueba: launcher/missions.json
 
 Desde el launcher **1.0.6**: retos opcionales para la sesión que se marcan solos leyendo los eventos que el juego escribe
-en su log. Referencia completa: [MISIONES.md](MISIONES.md). Necesita una build del juego que emita los eventos de
-[EVENTOS-JUEGO.md](EVENTOS-JUEGO.md); con una build anterior solo funcionan las misiones manuales.
+en su log. Referencia completa: [MISIONES.md](../remoto/MISIONES.md). Necesita una build del juego que emita los eventos de
+[EVENTOS-JUEGO.md](../juego/EVENTOS-JUEGO.md); con una build anterior solo funcionan las misiones manuales.
 
-- [ ] 1. Copia [`docs/missions.example.json`](missions.example.json) y adáptalo: `id` **nuevo** para cada playtest (si
+- [ ] 1. Copia [`docs/ejemplos/missions.example.json`](../ejemplos/missions.example.json) y adáptalo: `id` **nuevo** para cada playtest (si
       no, los jugadores conservan el progreso del anterior), fechas con zona horaria y `minGameVersion` = la build de la
       sesión. Entre 4 y 8 misiones; como mucho 2 manuales.
 - [ ] 2. Pruébalo en tu PC: guárdalo como `%LOCALAPPDATA%\PalitoLauncher\missions.local.json`, reinicia el launcher y
@@ -371,5 +374,5 @@ Los resultados usan el webhook de `feedback.json`. Para mandarlos a otro canal, 
 | Milestones (roadmap) | <https://github.com/JJJP-Dev/Coop2D/milestones> |
 | Releases del launcher | <https://github.com/JJJP-Dev/PalitoLauncher/releases> |
 | Workflows del launcher | <https://github.com/JJJP-Dev/PalitoLauncher/actions> |
-| Versión del launcher | [`Directory.Build.props`](../Directory.Build.props) |
-| Repos, URLs e intervalos | [`LauncherConfig.cs`](../src/PalitoLauncher.Core/LauncherConfig.cs) |
+| Versión del launcher | [`Directory.Build.props`](../../Directory.Build.props) |
+| Repos, URLs e intervalos | [`LauncherConfig.cs`](../../src/PalitoLauncher.Core/LauncherConfig.cs) |

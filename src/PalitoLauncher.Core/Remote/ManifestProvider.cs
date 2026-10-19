@@ -234,6 +234,7 @@ public sealed class ManifestProvider
         manifest.Playtests = SanitizePlaytests(manifest.Playtests, discarded);
         manifest.Hosting = SanitizeHosting(manifest.Hosting);
 
+        WebhookObfuscation.WarnIfPlain(manifest.BugReportWebhookUrl, "launcher.json");
         var webhook = SurveyProvider.NormalizeDiscordWebhook(manifest.BugReportWebhookUrl);
         if (webhook is null && !string.IsNullOrWhiteSpace(manifest.BugReportWebhookUrl))
             discarded.Add("bugReportWebhookUrl: no es un webhook de Discord válido");

@@ -621,10 +621,10 @@ public sealed class ManifestProviderTests : IDisposable
     [Fact]
     public void Parse_DocsExampleFile_IsAccepted()
     {
-        // Si la documentación incluye un ejemplo completo (docs/launcher.example.json), tiene que ser válido.
+        // Si la documentación incluye un ejemplo completo (docs/ejemplos/launcher.example.json), tiene que ser válido.
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "PalitoLauncher.sln"))) dir = dir.Parent;
-        var example = dir is null ? null : Path.Combine(dir.FullName, "docs", "launcher.example.json");
+        var example = dir is null ? null : Path.Combine(dir.FullName, "docs", "ejemplos", "launcher.example.json");
         if (example is null || !File.Exists(example)) return;
 
         Assert.NotNull(ManifestProvider.Parse(File.ReadAllText(example)));

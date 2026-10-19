@@ -5,7 +5,7 @@
   "askAfterSession": true,
   "minSessionMinutes": 5,
   "minHoursBetweenPrompts": 12,
-  "discordWebhookUrl": "https://discord.com/api/webhooks/PEGA_AQUI_LA_URL_DE_TU_WEBHOOK",
+  "discordWebhookUrl": "pw1:PEGA_AQUI_TU_WEBHOOK_OFUSCADO",
   "questions": [
     {
       "id": "overall",

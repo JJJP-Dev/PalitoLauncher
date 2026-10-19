@@ -3,7 +3,7 @@ using PalitoLauncher.Core.Versioning;
 namespace PalitoLauncher.Core.Missions;
 
 // Modelo de launcher/missions.json (repo del juego) ya saneado por MissionsProvider, y estado de cada conjunto en el PC.
-// Referencia del formato: docs/MISIONES.md.
+// Referencia del formato: docs/remoto/MISIONES.md.
 
 /// <summary>Dónde se acumula lo que pide un objetivo.</summary>
 public enum MissionScope

@@ -1,7 +1,7 @@
 # Eventos del juego en el log (contrato v1)
 
 Especificación para **Coop2D**: qué líneas tiene que escribir el juego en su `Player.log` para que Palito Launcher
-detecte las **misiones de prueba** (diseño del lado del launcher: [MISIONES.md](MISIONES.md)).
+detecte las **misiones de prueba** (diseño del lado del launcher: [MISIONES.md](../remoto/MISIONES.md)).
 
 **La idea:** el juego cuenta **hechos** («he provocado un Vapor en dúo», «me he unido a una partida empezada») y el
 launcher decide qué misiones cumplen esos hechos. El juego **no sabe nada de misiones**. Así se pueden crear misiones

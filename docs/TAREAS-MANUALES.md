@@ -21,6 +21,7 @@ Marca las casillas a medida que las hagas.
 - [5. Publicar una build del juego](#5-publicar-una-build-del-juego)
 - [6. Publicar una versión del launcher](#6-publicar-una-versión-del-launcher)
 - [7. Antes y después de cada sesión de playtest](#7-antes-y-después-de-cada-sesión-de-playtest)
+- [12. Misiones de prueba: launcher/missions.json](#12-misiones-de-prueba-launchermissionsjson) (desde el launcher 1.0.6)
 
 **Si algo falla y de vez en cuando:**
 
@@ -223,6 +224,7 @@ ser la «última» y nadie más la descargue.
 - [ ] Probado todo en local (`feedback.local.json` / `launcher.local.json`), publicado por PR y **borrados los archivos
       locales**.
 - [ ] Una opinión de prueba llega a `#feedback` (y, con la 1.0.5, un reporte de prueba a `#bugs`).
+- [ ] (1.0.6) `launcher/missions.json` con las misiones de esta sesión y un `id` nuevo ([punto 12](#12-misiones-de-prueba-launchermissionsjson)).
 - [ ] Recuerda a todos que abran el launcher antes de la sesión para que se actualicen (la descarga puede tardar).
 
 **Después:**
@@ -331,14 +333,38 @@ Hoy sois 4-5. Cuando el juego merezca grupos más grandes:
 - [ ] **Steam**: a partir de la 0.5 (CBT 1) las ramas de Steam sustituyen al launcher para la gente de fuera
       ([PUBLICAR.md](PUBLICAR.md#1-esquema-de-versiones-del-proyecto)); el launcher sigue siendo la herramienta del equipo.
 
+## 12. Misiones de prueba: launcher/missions.json
+
+Desde el launcher **1.0.6**: retos opcionales para la sesión que se marcan solos leyendo los eventos que el juego escribe
+en su log. Referencia completa: [MISIONES.md](MISIONES.md). Necesita una build del juego que emita los eventos de
+[EVENTOS-JUEGO.md](EVENTOS-JUEGO.md); con una build anterior solo funcionan las misiones manuales.
+
+- [ ] 1. Copia [`docs/missions.example.json`](missions.example.json) y adáptalo: `id` **nuevo** para cada playtest (si
+      no, los jugadores conservan el progreso del anterior), fechas con zona horaria y `minGameVersion` = la build de la
+      sesión. Entre 4 y 8 misiones; como mucho 2 manuales.
+- [ ] 2. Pruébalo en tu PC: guárdalo como `%LOCALAPPDATA%\PalitoLauncher\missions.local.json`, reinicia el launcher y
+      mira la tarjeta en Inicio. Juega una partida corta: al cerrar el juego, el toast dice qué se completó (y el log del
+      launcher, `Misiones:`, el porqué).
+- [ ] 3. Publícalo como `launcher/missions.json` en Coop2D con una PR, igual que `feedback.json`.
+- [ ] 4. Borra `missions.local.json` y la carpeta `%LOCALAPPDATA%\PalitoLauncher\missions\` (tu progreso de prueba) y
+      reinicia el launcher.
+- [ ] 5. Durante la sesión, cada jugador tiene **un mensaje** en `#feedback` («🧪 Misiones del Pre 2 · nombre») que se va
+      actualizando. Pide a todos que pongan su nombre de Discord en **Ajustes → Juego → Tu nombre en Discord**.
+- [ ] 6. Al terminar (`endsUtc`), cada launcher manda su versión final («· Final» en el título). Convierte cada «❌
+      Falló» en una issue de Coop2D.
+
+Los resultados usan el webhook de `feedback.json`. Para mandarlos a otro canal, pon `discordWebhookUrl` en
+`missions.json`.
+
 ## Referencia rápida
 
 | Qué | Dónde |
 |---|---|
 | Encuesta de opiniones | `launcher/feedback.json` en Coop2D (`main`) → <https://raw.githubusercontent.com/JJJP-Dev/Coop2D/main/launcher/feedback.json> |
 | Tablón del launcher (1.0.5) | `launcher/launcher.json` en Coop2D (`main`) |
+| Misiones de prueba (1.0.6) | `launcher/missions.json` en Coop2D (`main`); estado de cada jugador en `%LOCALAPPDATA%\PalitoLauncher\missions\` |
 | Fondo | `launcher/background.png` en Coop2D (`main`) |
-| Pruebas locales (solo tu PC) | `%LOCALAPPDATA%\PalitoLauncher\feedback.local.json` y `launcher.local.json` |
+| Pruebas locales (solo tu PC) | `%LOCALAPPDATA%\PalitoLauncher\feedback.local.json`, `launcher.local.json` y `missions.local.json` |
 | Logs del launcher | `%LOCALAPPDATA%\PalitoLauncher\logs\launcher-AAAAMMDD.log` |
 | Bandejas de salida (cada PC) | `%LOCALAPPDATA%\PalitoLauncher\feedback\outbox\` y, desde la 1.0.5, `%LOCALAPPDATA%\PalitoLauncher\reports\outbox\` |
 | Releases del juego | <https://github.com/JJJP-Dev/Coop2D/releases> |

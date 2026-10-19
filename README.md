@@ -61,11 +61,22 @@ Al cerrar el juego tras una partida de unos minutos, el launcher puede preguntar
 las estrellas o **Dar mi opinión** para responder una encuesta de un minuto, o **Ahora no** para cerrarlo. También
 puedes escribir cuando quieras con **Enviar opinión** (en Inicio o en el menú **⋯**).
 
-- Tu respuesta le llega al desarrollador junto con la versión del juego y de Windows, y tu nombre o apodo solo si lo
-  escribes (es opcional). No se envía nada más.
+- Tu respuesta le llega al desarrollador junto con la versión del juego y de Windows, y tu nombre de Discord solo si
+  lo escribes (es opcional, en **Ajustes → Juego → Tu nombre en Discord**). No se envía nada más.
 - Si no hay internet, se guarda y se envía sola más tarde.
 - Para que no te pregunte más: **No volver a preguntar** en el aviso, o **Ajustes → Juego → Pedirme opinión al cerrar
   el juego**.
+
+### Misiones de prueba
+
+Durante algunos playtests, **Inicio** muestra la tarjeta **Misiones de prueba**: retos cortos como «Provoca un Vapor en
+dúo» o «Únete a una partida ya empezada». No son obligatorias.
+
+- Lo que consigues en el juego se marca **solo** al cerrarlo (✓), y te avisa con un mensaje.
+- Lo que no se puede detectar, o lo que falló, lo marcas tú: **Funcionó**, **Falló…** (con una nota opcional) o **No
+  la probé**.
+- Tus resultados le llegan al equipo por Discord en un único mensaje que se va actualizando. Si no quieres verlas:
+  **Ajustes → Juego → Mostrar las misiones de prueba**.
 
 ### Roadmap
 
@@ -187,6 +198,14 @@ versión del launcher; sin ese archivo se usa una encuesta por defecto y las res
 en cada PC. Cómo crear el webhook, el formato del JSON, cómo probarlo y qué llega a Discord:
 **[docs/FEEDBACK.md](docs/FEEDBACK.md)** (ejemplo listo para copiar en
 [docs/feedback.example.json](docs/feedback.example.json)).
+
+### Misiones de prueba (1.0.6)
+
+Retos para los playtests definidos en `launcher/missions.json` de Coop2D. El launcher pasa `-palitoSession <id>` al
+juego, lee al cerrarlo las líneas `[PalitoEvent]` que el juego escribe en su `Player.log`, marca las misiones cumplidas
+y publica los resultados de cada jugador en Discord (webhook de `feedback.json`). Referencia:
+**[docs/MISIONES.md](docs/MISIONES.md)**; contrato de eventos con el juego: **[docs/EVENTOS-JUEGO.md](docs/EVENTOS-JUEGO.md)**;
+ejemplo: [docs/missions.example.json](docs/missions.example.json).
 
 ### Publicar una versión del launcher
 

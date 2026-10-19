@@ -118,18 +118,61 @@
                     <TextBlock Text="Si el launcher está abierto, te avisa con una notificación de Windows 15 minutos antes de que empiece una sesión."
                                Style="{StaticResource DimText}" Margin="0,4,58,0" />
 
+                    <!-- Misiones de prueba (missions.json) -->
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,16,0,0"
+                              Content="Mostrar las misiones de prueba" IsChecked="{Binding ShowMissions}" />
+                    <TextBlock Text="Retos opcionales para los playtests en Inicio. Lo que consigues en el juego se marca solo y el resultado le llega al equipo."
+                               Style="{StaticResource DimText}" Margin="0,4,58,0" />
+                    <Grid Margin="0,10,0,0" Visibility="{Binding HasPendingMissions, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource GlyphText}">
+                                    <Setter Property="FontSize" Value="13" />
+                                    <Setter Property="Text" Value="&#xE896;" />
+                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PendingMissionsWaitForTeam}" Value="True">
+                                            <Setter Property="Text" Value="&#xE946;" />
+                                            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" Text="{Binding PendingMissionsText}" FontSize="13" VerticalAlignment="Center"
+                                   TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PendingMissionsWaitForTeam}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Button Grid.Column="2" Style="{StaticResource SettingsButton}" Margin="12,0,0,0" Content="Enviar ahora"
+                                Command="{Binding SendMissionResultsCommand}" />
+                    </Grid>
+
                     <!-- Opiniones -->
                     <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,18,0,0" />
                     <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,16,0,0"
                               Content="Pedirme opinión al cerrar el juego" IsChecked="{Binding AskFeedbackAfterSession}" />
                     <TextBlock Text="Tras una partida de unos minutos aparece una pequeña encuesta opcional (como mucho una vez cada pocas horas)."
                                Style="{StaticResource DimText}" Margin="0,4,58,0" />
-                    <TextBlock Text="Nombre para las opiniones (opcional)" Style="{StaticResource BodyText}" Margin="0,16,0,6" />
+                    <TextBlock Text="Tu nombre en Discord (opcional)" Style="{StaticResource BodyText}" Margin="0,16,0,6" />
                     <TextBox x:Name="FeedbackNicknameBox" Text="{Binding FeedbackNickname, UpdateSourceTrigger=PropertyChanged}"
                              MaxLength="{Binding NicknameMaxLength, Mode=OneWay}" Width="360" HorizontalAlignment="Left"
                              LostKeyboardFocus="FeedbackNicknameBox_LostKeyboardFocus"
-                             AutomationProperties.Name="Nombre para las opiniones (opcional)" />
-                    <TextBlock Text="Así el equipo sabe de quién es cada opinión. Déjalo vacío para enviarlas de forma anónima."
+                             AutomationProperties.Name="Tu nombre en Discord (opcional)" />
+                    <TextBlock Text="Pon el mismo nombre que usas en Discord: así el equipo sabe de quién es cada opinión, reporte o resultado de las misiones. Déjalo vacío para enviarlos de forma anónima."
                                Style="{StaticResource DimText}" Margin="0,4,0,0" />
                     <Grid Margin="0,14,0,0" Visibility="{Binding HasPendingFeedback, Converter={StaticResource BoolToVis}}">
                         <Grid.ColumnDefinitions>

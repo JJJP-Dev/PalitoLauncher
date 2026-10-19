@@ -212,6 +212,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         _manifestProvider = CreateManifestProvider(_github);
         // «Reportar un problema» (bandeja de salida en disco): igual, opcional.
         _bugReports = CreateBugReportService();
+        // Misiones de prueba (launcher/missions.json + eventos del juego en Player.log): igual, opcional.
+        _missionsProvider = CreateMissionsProvider(_github);
+        _missionStore = CreateMissionStore();
+        _missionReports = CreateMissionReportService();
 
         _process.GameStarted += OnGameStarted;
         _process.GameExited += OnGameExited;
@@ -278,7 +282,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         LaunchExtraInstanceCommand = new RelayCommand(() => RunFlow(LaunchExtraInstanceAsync, "Abrir otra instancia del juego"),
             () => _settings.DeveloperMode && !IsBusy);
 
+        SendMissionResultsCommand = new RelayCommand(() => RunFlow(SendMissionResultsNowAsync, "Enviar resultados de las misiones"),
+            () => !_missionSendRunning && _missionState != null && _missionReports != null);
+
         Settings = new SettingsViewModel(this);
+
+        // missions.json: tarjeta «Misiones de prueba».
+        Missions = new MissionsCardViewModel(OnMissionAction, () => SendMissionResultsCommand.Execute(null),
+            () => SendMissionResultsCommand.CanExecute(null));
 
         // launcher.json: tarjeta de la sesión de prueba.
         Playtest = new PlaytestCardViewModel(
@@ -292,7 +303,11 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
 
         // launcher.json se relee cada 15 min (raw: no gasta cupo) y el reloj recalcula anuncios y cuenta atrás cada 30 s.
         _manifestTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = LauncherConfig.ManifestRefreshInterval };
-        _manifestTimer.Tick += (_, _) => RunFlow(RefreshManifestAsync, "launcher.json periódico", showErrors: false);
+        _manifestTimer.Tick += (_, _) =>
+        {
+            RunFlow(RefreshManifestAsync, "launcher.json periódico", showErrors: false);
+            RunFlow(RefreshMissionsAsync, "missions.json periódico", showErrors: false);
+        };
         _manifestClockTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = ManifestClockInterval };
         _manifestClockTimer.Tick += (_, _) => OnManifestClockTick();
 
@@ -1237,6 +1252,9 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 // Al activarlo con una sesión a punto de empezar, se avisa ya.
                 if (_settings.PlaytestRemindersEnabled) CheckPlaytestReminder();
                 break;
+            case SettingChange.Missions:
+                RefreshMissionsCard();
+                break;
             case SettingChange.DeveloperMode:
                 // Muestra u oculta «Abrir otra instancia» (junto a JUGAR y en el menú ⋯).
                 OnPropertyChanged(nameof(IsDeveloperMode));
@@ -1256,6 +1274,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             _toastTimer.Stop();
             _manifestTimer.Stop();
             _manifestClockTimer.Stop();
+            _missionSendTimer?.Stop();
             _operationCts?.Cancel();
             _lifetimeCts.Cancel();
         }

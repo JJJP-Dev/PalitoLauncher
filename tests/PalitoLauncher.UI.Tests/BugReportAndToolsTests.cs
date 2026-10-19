@@ -476,7 +476,8 @@ public sealed class BugReportAndToolsTests
         await WpfHost.WaitUntilAsync(() => vm.ToastText.StartsWith("Instala Coop2D primero", StringComparison.Ordinal), "aviso sin juego");
         Assert.Empty(calls);
 
-        // Instalado: misma carpeta, exe y argumentos (perfil + usuario) que JUGAR.
+        // Instalado: misma carpeta, exe y argumentos (perfil + usuario) que JUGAR, más su propio log (1.0.6: así sus
+        // eventos no cuentan para las misiones de prueba).
         MainViewModelAccess.SetInstalled(vm, MainViewModelAccess.Installed("0.0.3", "0.0.3"));
         vm.CurrentSettings.LaunchProfile = LaunchProfile.Windowed1080;
         vm.CurrentSettings.LaunchArguments = "-nolog";
@@ -484,7 +485,8 @@ public sealed class BugReportAndToolsTests
         await WpfHost.WaitUntilAsync(() => calls.Count == 1, "instancia extra");
         Assert.Equal(@"C:\Juegos\Coop2D\game", calls[0].Dir);
         Assert.Equal(LauncherConfig.GameExecutableName, calls[0].Exe);
-        Assert.Equal(vm.BuildLaunchArguments(), calls[0].Args);
+        Assert.StartsWith(vm.BuildLaunchArguments() + " -logFile \"", calls[0].Args);
+        Assert.Contains("extra-instance-logs", calls[0].Args, StringComparison.Ordinal);
         Assert.StartsWith("-screen-fullscreen 0 -screen-width 1920", calls[0].Args);
         await WpfHost.WaitUntilAsync(() => vm.ToastText.StartsWith("Se abrió otra instancia", StringComparison.Ordinal), "toast");
         Assert.False(vm.IsGameRunning); // la instancia extra no se sigue: JUGAR no cambia

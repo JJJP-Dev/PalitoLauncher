@@ -1,0 +1,65 @@
+{
+  "id": "pre2-sesion-1",
+  "title": "Misiones del Pre 2",
+  "intro": "Prueba esto durante la sesión. Lo que consigas en el juego se marca solo al cerrarlo; lo demás, márcalo tú.",
+  "minGameVersion": "0.0.4-prototype.2",
+  "startsUtc": "2026-10-31T19:00:00+01:00",
+  "endsUtc": "2026-11-07T23:59:00+01:00",
+  "missions": [
+    {
+      "id": "hospedar",
+      "title": "Hospeda una partida",
+      "hint": "Pulsa Host y pasa tu IP a un amigo (menú ⋯ › Hostear partida: mi IP).",
+      "goal": { "event": "match_joined", "where": { "role": "host" } }
+    },
+    {
+      "id": "internet",
+      "title": "Únete a alguien de fuera de tu casa",
+      "hint": "Con su IP pública o por VPN (Radmin, Hamachi…).",
+      "goal": { "event": "join_result", "where": { "result": "ok", "target": ["public", "vpn"] } }
+    },
+    {
+      "id": "entrar-tarde",
+      "title": "Únete a una partida ya empezada",
+      "hint": "Que alguien hospede, espera un par de minutos y entra.",
+      "goal": { "event": "match_joined", "where": { "late": true } }
+    },
+    {
+      "id": "cuatro",
+      "title": "Juega una partida de cuatro",
+      "goal": { "any": [
+        { "event": "match_joined", "where": { "players": { ">=": 4 } } },
+        { "event": "player_joined", "where": { "players": { ">=": 4 } } }
+      ] }
+    },
+    {
+      "id": "vapor-duo",
+      "title": "Provoca un Vapor en dúo",
+      "hint": "Uno marca con fuego (básico o clic derecho) y el otro detona con agua (clic izquierdo).",
+      "goal": { "event": "reaction", "where": { "variant": "vapor_*", "duo": true, "me": ["aura", "detonator"] } },
+      "check": "¿Se vio el titular «VAPOR!» y la nube?"
+    },
+    {
+      "id": "tres-reacciones",
+      "title": "Participa en las tres reacciones",
+      "hint": "Vapor, Electrocución y Sobrecarga, marcando o detonando. Vale en varias sesiones.",
+      "goal": { "all": [
+        { "event": "reaction", "where": { "variant": "vapor_*", "me": { "!=": "none" } }, "scope": "set" },
+        { "event": "reaction", "where": { "variant": "electrocution_*", "me": { "!=": "none" } }, "scope": "set" },
+        { "event": "reaction", "where": { "variant": "overload_*", "me": { "!=": "none" } }, "scope": "set" }
+      ] }
+    },
+    {
+      "id": "oleadas",
+      "title": "Llega al final de las oleadas",
+      "allowSolo": false,
+      "goal": { "event": "waves_finished", "scope": "match" }
+    },
+    {
+      "id": "numeros",
+      "title": "¿Se leen bien los números de daño?",
+      "hint": "Fíjate en medio de una oleada grande.",
+      "manual": true
+    }
+  ]
+}

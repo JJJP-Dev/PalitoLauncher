@@ -1,0 +1,123 @@
+<UserControl x:Class="PalitoLauncher.Views.MissionsCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PalitoLauncher.ViewModels"
+             Focusable="False">
+    <!-- DataContext: MissionsCardViewModel (launcher/missions.json). -->
+    <Border Style="{StaticResource Card}" AutomationProperties.Name="Misiones de prueba">
+        <StackPanel>
+            <!-- Cabecera -->
+            <DockPanel LastChildFill="True">
+                <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressText}" Style="{StaticResource SmallDimText}"
+                           VerticalAlignment="Center" Margin="12,0,0,0" />
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE9D5;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
+                               Margin="0,0,10,0" />
+                    <TextBlock Text="Misiones de prueba" Style="{StaticResource SmallDimText}" FontSize="12.5" FontWeight="SemiBold"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
+            <TextBlock Text="{Binding Title}" FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                       TextWrapping="Wrap" Margin="0,8,0,0" />
+            <TextBlock Text="{Binding Intro}" Style="{StaticResource BodyText}" Foreground="{StaticResource TextDimBrush}"
+                       Margin="0,4,0,0" Visibility="{Binding HasIntro, Converter={StaticResource BoolToVis}}" />
+            <ProgressBar Margin="0,10,0,0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"
+                         AutomationProperties.Name="{Binding ProgressText}" />
+
+            <!-- Versión instalada anterior a la que necesitan -->
+            <Grid Margin="0,12,0,0" Visibility="{Binding HasVersionWarning, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="&#xE7BA;" Style="{StaticResource GlyphText}" FontSize="14" Foreground="{StaticResource WarningBrush}"
+                           Margin="0,1,8,0" VerticalAlignment="Top" />
+                <TextBlock Grid.Column="1" Text="{Binding VersionWarning}" FontSize="13.5" Foreground="{StaticResource WarningBrush}"
+                           TextWrapping="Wrap" />
+            </Grid>
+
+            <!-- Misiones -->
+            <ItemsControl ItemsSource="{Binding Items}" Focusable="False" IsTabStop="False" Margin="0,4,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:MissionItemViewModel}">
+                        <Grid Margin="0,14,0,0" AutomationProperties.Name="{Binding Title}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Glyph}" VerticalAlignment="Top" Margin="0,2,12,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock" BasedOn="{StaticResource GlyphText}">
+                                        <Setter Property="FontSize" Value="15" />
+                                        <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsDone}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsFailed}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Title}" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding StatusText}" Style="{StaticResource SmallDimText}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Hint}" Style="{StaticResource DimText}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Visibility="{Binding ShowHint, Converter={StaticResource BoolToVis}}" />
+                                <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Visibility="{Binding HasNote, Converter={StaticResource BoolToVis}}">
+                                    <Run Text="↳ " /><Run Text="{Binding Note, Mode=OneWay}" />
+                                </TextBlock>
+
+                                <!-- Pregunta de comprobación (completada sola) -->
+                                <WrapPanel Margin="0,6,0,0" Visibility="{Binding ShowCheckRow, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding Check}" FontSize="13.5" Foreground="{StaticResource TextBrush}"
+                                               VerticalAlignment="Center" Margin="0,0,12,0" TextWrapping="Wrap" />
+                                    <Button Style="{StaticResource LinkButton}" Content="Sí" Margin="0,0,14,0" Command="{Binding CheckYesCommand}"
+                                            AutomationProperties.Name="Sí, se vio bien" />
+                                    <Button Style="{StaticResource LinkButton}" Content="No…" Command="{Binding CheckNoCommand}"
+                                            AutomationProperties.Name="No, se vio mal" />
+                                </WrapPanel>
+
+                                <!-- Marcas -->
+                                <WrapPanel Margin="0,6,0,0" Visibility="{Binding HasActions, Converter={StaticResource BoolToVis}}">
+                                    <Button Style="{StaticResource LinkButton}" Content="Funcionó" Margin="0,0,14,0" Command="{Binding WorkedCommand}"
+                                            Visibility="{Binding ShowWorked, Converter={StaticResource BoolToVis}}" />
+                                    <Button Style="{StaticResource LinkButton}" Content="Falló…" Margin="0,0,14,0" Command="{Binding FailedCommand}"
+                                            Visibility="{Binding ShowFailed, Converter={StaticResource BoolToVis}}" />
+                                    <Button Style="{StaticResource LinkButton}" Content="No la probé" Margin="0,0,14,0" Command="{Binding SkipCommand}"
+                                            Visibility="{Binding ShowSkip, Converter={StaticResource BoolToVis}}" />
+                                    <Button Style="{StaticResource LinkButton}" Content="Deshacer" Command="{Binding UndoCommand}"
+                                            Visibility="{Binding ShowUndo, Converter={StaticResource BoolToVis}}" />
+                                </WrapPanel>
+
+                                <!-- Nota (qué falló / qué se vio mal) -->
+                                <StackPanel Margin="0,8,0,0" Visibility="{Binding IsEditingNote, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding NoteLabel}" Style="{StaticResource BodyText}" Margin="0,0,0,6" />
+                                    <TextBox Text="{Binding NoteDraft, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding NoteMaxLength, Mode=OneWay}"
+                                             Style="{StaticResource MultilineTextBox}" MinHeight="60"
+                                             AutomationProperties.Name="{Binding NoteLabel}" />
+                                    <WrapPanel Margin="0,8,0,0">
+                                        <Button Style="{StaticResource AccentButton}" Content="Guardar" Margin="0,0,8,0" Command="{Binding SaveNoteCommand}" />
+                                        <Button Style="{StaticResource GhostButton}" Content="Cancelar" Command="{Binding CancelNoteCommand}" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,16,0,10" />
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Enviar resultados ahora" Margin="16,0,0,0"
+                        VerticalAlignment="Center" Command="{Binding SendNowCommand}" />
+                <TextBlock Text="Lo que consigas se marca solo al cerrar el juego. Lo demás, márcalo tú: el equipo lo verá en Discord."
+                           Style="{StaticResource SmallDimText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            </DockPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

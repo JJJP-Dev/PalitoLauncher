@@ -198,6 +198,15 @@ public sealed partial class MainViewModel
         {
             LogManifestError("mostrar los datos de launcher.json", ex);
         }
+        // Misiones: la versión instalada pudo cambiar (aviso de versión) o el conjunto empezar o terminar.
+        try
+        {
+            if (_missionSet != null) RefreshMissionsCard();
+        }
+        catch (Exception ex)
+        {
+            LogManifestError("mostrar los datos de launcher.json", ex);
+        }
     }
 
     /// <summary>Cada 30 s: anuncios que empiezan o acaban, cuenta atrás y aviso de la sesión.</summary>
@@ -206,6 +215,7 @@ public sealed partial class MainViewModel
         if (_disposed) return;
         RefreshManifestPresentation();
         CheckPlaytestReminder();
+        OnMissionsClockTick();
     }
 
     /// <summary>Un mismo fallo de la lógica del manifiesto se registra una vez (el reloj lo repetiría cada 30 s).</summary>

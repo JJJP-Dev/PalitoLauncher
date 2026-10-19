@@ -58,6 +58,13 @@ public static class LauncherConfig
     public const string RemoteManifestUrl =
         "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/launcher.json";
 
+    /// <summary>
+    /// Misiones de prueba opcionales en el repo del juego (retos que el launcher detecta leyendo los eventos que el juego
+    /// escribe en su Player.log). Ver docs/MISIONES.md y docs/EVENTOS-JUEGO.md. Se relee con launcher.json.
+    /// </summary>
+    public const string RemoteMissionsUrl =
+        "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/missions.json";
+
     /// <summary>Cada cuánto se vuelve a leer launcher.json mientras el launcher está abierto (raw: no gasta cupo de la API).</summary>
     public static readonly TimeSpan ManifestRefreshInterval = TimeSpan.FromMinutes(15);
 

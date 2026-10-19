@@ -60,6 +60,9 @@ public sealed partial class MainViewModel
 
         // Reportes de problemas pendientes (cuando ya se sabe el webhook: tras la primera lectura de launcher.json).
         RunFlow(InitializeBugReportsAsync, "Reportes pendientes", showErrors: false);
+
+        // Misiones de prueba: conjunto, partidas jugadas con el launcher cerrado (Player.log) y resultados pendientes.
+        RunFlow(RefreshMissionsAsync, "Misiones", showErrors: false);
     }
 
     private async Task InitializeCoreAsync()
@@ -474,6 +477,8 @@ public sealed partial class MainViewModel
         await PeriodicFeedbackAsync();
         // Reportes de problemas pendientes (Discord).
         await PeriodicBugReportsAsync();
+        // Resultados de las misiones pendientes (Discord).
+        await PeriodicMissionsAsync();
     }
 
     /// <summary>Fondo remoto (raw.githubusercontent.com, sin gastar cupo de la API). Si falla, queda el degradado.</summary>
@@ -619,6 +624,9 @@ public sealed partial class MainViewModel
         {
             RunFlow(() => MaybePromptFeedbackAsync(duration, exitCode, played), "Invitación a opinar", showErrors: false);
         }
+
+        // Misiones de prueba: eventos que el juego escribió en Player.log durante esta partida.
+        RunFlow(ProcessMissionLogsAfterGameAsync, "Misiones tras la partida", showErrors: false);
 
         UpdateState();
         if (!IsBusy) await RefreshInstallStatusAsync(recover: false);

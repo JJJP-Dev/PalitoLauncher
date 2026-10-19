@@ -804,7 +804,8 @@ public sealed partial class MainViewModel
         if (status?.State != InstallState.Installed || string.IsNullOrEmpty(status.GameDir) || IsGameRunning || IsBusy) return;
 
         var exe = GameExecutableName;
-        var arguments = BuildLaunchArguments(); // modo de pantalla + argumentos del usuario (que mandan)
+        // Modo de pantalla + argumentos del usuario (que mandan) + -palitoSession para las misiones de prueba.
+        var arguments = AppendMissionSession(BuildLaunchArguments(), out var missionSession);
         try
         {
             await Task.Run(() => _process.Launch(status.GameDir, exe, arguments));
@@ -815,7 +816,7 @@ public sealed partial class MainViewModel
             throw;
         }
 
-        Log.Info($"Juego lanzado ({(status.Info != null ? DisplayOf(status.Info) : exe)}).");
+        Log.Info($"Juego lanzado ({(status.Info != null ? DisplayOf(status.Info) : exe)}; sesión {missionSession}).");
         _crashNotice = null;
         MarkGameSessionStarted(restart: true);
         IsGameRunning = IsProcessRunningSafe();
@@ -1504,6 +1505,8 @@ public sealed partial class MainViewModel
                 ? $"{playtest.Playtest.Id} ({playtest.Playtest.StartsUtc.ToString("u", inv)}{(playtest.IsOngoing ? ", en curso" : "")})"
                 : "ninguna",
             ["Avisar antes de las sesiones"] = _settings.PlaytestRemindersEnabled ? "sí" : "no",
+            ["Misiones de prueba"] = MissionsDiagnosticText(),
+            ["Mostrar misiones"] = _settings.ShowMissions ? "sí" : "no",
             ["Aviso en pantalla"] = SecondaryNoticeText,
             ["Texto de estado"] = StatusText,
         };

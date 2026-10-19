@@ -78,6 +78,10 @@
             <views:PlaytestCard Margin="0,16,0,0" DataContext="{Binding Playtest}"
                                 Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}" />
 
+            <!-- Misiones de prueba (missions.json) -->
+            <views:MissionsCard Margin="0,16,0,0" DataContext="{Binding Missions}"
+                                Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}" />
+
             <!-- Novedades de la última versión, o «Qué ha cambiado desde tu versión» si te has saltado 2 o más -->
             <Border Style="{StaticResource Card}" Margin="0,16,0,0" Visibility="{Binding HasLatest, Converter={StaticResource BoolToVis}}">
                 <StackPanel>

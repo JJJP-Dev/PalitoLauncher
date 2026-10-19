@@ -68,6 +68,9 @@ public sealed class LauncherSettings
     /// <summary>Perfil de lanzamiento del juego (ventana, pantalla completa…). Se combina con LaunchArguments.</summary>
     public Launch.LaunchProfile LaunchProfile { get; set; } = Launch.LaunchProfile.Default;
 
+    /// <summary>Muestra la tarjeta «Misiones de prueba» en Inicio (si hay launcher/missions.json).</summary>
+    public bool ShowMissions { get; set; } = true;
+
     /// <summary>Muestra las herramientas de desarrollo (abrir varias instancias del juego, etc.).</summary>
     public bool DeveloperMode { get; set; }
 

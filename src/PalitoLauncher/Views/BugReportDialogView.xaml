@@ -130,12 +130,12 @@
                     </TextBlock>
 
                     <!-- Nombre (compartido con las opiniones) -->
-                    <TextBlock Text="Tu nombre o apodo (opcional)" Style="{StaticResource FieldTitle}" Margin="0,10,0,0" />
+                    <TextBlock Text="Tu nombre en Discord (opcional)" Style="{StaticResource FieldTitle}" Margin="0,10,0,0" />
                     <TextBlock Text="Para poder preguntarte si necesitamos más detalles. Déjalo vacío si prefieres que sea anónimo."
                                Style="{StaticResource DimText}" Margin="0,3,0,0" />
                     <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding NicknameMaxLength, Mode=OneWay}"
                              Width="320" HorizontalAlignment="Left" Margin="0,10,0,18"
-                             AutomationProperties.Name="Tu nombre o apodo (opcional)" />
+                             AutomationProperties.Name="Tu nombre en Discord (opcional)" />
 
                     <!-- Registros -->
                     <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"

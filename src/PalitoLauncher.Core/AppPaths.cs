@@ -19,6 +19,9 @@ public static class AppPaths
     /// <summary>Bandeja de salida de los reportes de problemas (una carpeta por reporte, con sus adjuntos).</summary>
     public static string BugReportOutboxDir => Path.Combine(AppDataDir, "reports", "outbox");
 
+    /// <summary>Estado de las misiones de prueba (un JSON por conjunto).</summary>
+    public static string MissionsDir => Path.Combine(AppDataDir, "missions");
+
     /// <summary>Carpeta "biblioteca" por defecto: %LOCALAPPDATA%\PalitoGames.</summary>
     public static string DefaultLibraryDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PalitoGames");

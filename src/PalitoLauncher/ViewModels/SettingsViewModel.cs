@@ -31,6 +31,7 @@ public enum SettingChange
     CheckLauncherUpdates,
     PlaytestReminders,
     DeveloperMode,
+    Missions,
 }
 
 /// <summary>
@@ -50,6 +51,9 @@ public sealed class SettingsViewModel : ObservableObject
     private int _sizeVersion;
     private string? _selfUpdateNote;
     private string _feedbackNickname = "";
+    private bool _pendingMissions;
+    private bool _pendingMissionsWaitForTeam;
+    private bool _hasMissionSet;
     private int _pendingFeedbackCount;
     private bool _pendingFeedbackWaitsForTeam;
     private int _pendingBugReportCount;
@@ -231,6 +235,35 @@ public sealed class SettingsViewModel : ObservableObject
             _owner.OnSettingsChanged(SettingChange.PlaytestReminders);
         }
     }
+
+    // ───────────── Misiones de prueba (tarjeta Juego) ─────────────
+
+    /// <summary>Muestra la tarjeta «Misiones de prueba» en Inicio.</summary>
+    public bool ShowMissions
+    {
+        get => S.ShowMissions;
+        set
+        {
+            if (S.ShowMissions == value) return;
+            S.ShowMissions = value;
+            OnPropertyChanged();
+            _owner.OnSettingsChanged(SettingChange.Missions);
+        }
+    }
+
+    /// <summary>Hay un conjunto de misiones (si no, no se muestra el ajuste de enviar).</summary>
+    public bool HasMissionSet => _hasMissionSet;
+
+    public bool HasPendingMissions => _pendingMissions;
+
+    /// <summary>Los resultados esperan a que el equipo publique un webhook: se muestran sin color de aviso.</summary>
+    public bool PendingMissionsWaitForTeam => _pendingMissionsWaitForTeam;
+
+    public string PendingMissionsText => _pendingMissionsWaitForTeam
+        ? "Resultados de las misiones guardados: se enviarán cuando el equipo active los envíos"
+        : "Resultados de las misiones pendientes de enviar";
+
+    public ICommand SendMissionResultsCommand => _owner.SendMissionResultsCommand;
 
     // ───────────── Opiniones (tarjeta Juego) ─────────────
 
@@ -426,6 +459,19 @@ public sealed class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(PendingBugReportsText));
         OnPropertyChanged(nameof(HasPendingBugReports));
         OnPropertyChanged(nameof(PendingBugReportsWaitForTeam));
+    }
+
+    /// <summary>Estado del envío de los resultados de las misiones.</summary>
+    internal void SetPendingMissions(bool pending, bool waitsForTeam, bool hasSet)
+    {
+        if (_pendingMissions == pending && _pendingMissionsWaitForTeam == waitsForTeam && _hasMissionSet == hasSet) return;
+        _pendingMissions = pending;
+        _pendingMissionsWaitForTeam = waitsForTeam;
+        _hasMissionSet = hasSet;
+        OnPropertyChanged(nameof(HasPendingMissions));
+        OnPropertyChanged(nameof(PendingMissionsWaitForTeam));
+        OnPropertyChanged(nameof(PendingMissionsText));
+        OnPropertyChanged(nameof(HasMissionSet));
     }
 
     /// <summary>Actualiza la tarjeta "Instalación" (ruta y tamaño en disco, calculado en segundo plano).</summary>

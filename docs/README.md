@@ -37,6 +37,8 @@ Si vas a tocar el código después de un tiempo sin verlo, este orden funciona b
 | Cambiar las preguntas de la encuesta | [FEEDBACK.md](FEEDBACK.md) y el ejemplo [feedback.example.json](feedback.example.json) |
 | Entender o cambiar la página Roadmap (milestones de GitHub) | [ROADMAP.md](ROADMAP.md) |
 | Publicar anuncios, sesiones de prueba, enlaces de comunidad, bloquear una build con problemas o configurar «Reportar un problema» (1.0.5) | [LAUNCHER-JSON.md](LAUNCHER-JSON.md) |
+| Preparar misiones de prueba para un playtest (1.0.6) | [MISIONES.md](MISIONES.md) y el ejemplo [missions.example.json](missions.example.json) |
+| Saber qué eventos tiene que escribir el juego en su log para las misiones | [EVENTOS-JUEGO.md](EVENTOS-JUEGO.md) |
 | Ver qué cosas solo puedo hacer yo a mano (webhooks, PRs al repo del juego, publicar, si falla GitHub Actions…) | [TAREAS-MANUALES.md](TAREAS-MANUALES.md) |
 
 ## Todos los documentos
@@ -51,6 +53,9 @@ Si vas a tocar el código después de un tiempo sin verlo, este orden funciona b
 | [feedback.example.json](feedback.example.json) | Encuesta de ejemplo lista para copiar |
 | [ROADMAP.md](ROADMAP.md) | Cómo se construye la página Roadmap a partir de los milestones y cómo nombrarlos en GitHub |
 | [LAUNCHER-JSON.md](LAUNCHER-JSON.md) | Referencia de `launcher/launcher.json` (1.0.5): anuncios, builds bloqueadas, enlaces, sesiones de prueba, hosting y webhook de reportes |
+| [MISIONES.md](MISIONES.md) | Misiones de prueba (1.0.6): `launcher/missions.json`, objetivos, lectura del log, tarjeta, envío a Discord y escalabilidad |
+| [missions.example.json](missions.example.json) | Conjunto de misiones de ejemplo listo para copiar |
+| [EVENTOS-JUEGO.md](EVENTOS-JUEGO.md) | Contrato con Coop2D: formato y catálogo de los eventos que el juego escribe en `Player.log` |
 | [TAREAS-MANUALES.md](TAREAS-MANUALES.md) | Checklist de lo que solo puedes hacer tú, con pasos numerados |
 
 ## Otras fuentes de verdad
@@ -65,7 +70,8 @@ Si vas a tocar el código después de un tiempo sin verlo, este orden funciona b
 ## Mantener la documentación al día
 
 - Las guías de arquitectura y de código describen la versión **1.0.4**; las novedades de la 1.0.5 están en
-  [LAUNCHER-JSON.md](LAUNCHER-JSON.md), [FEEDBACK.md](FEEDBACK.md) y [TAREAS-MANUALES.md](TAREAS-MANUALES.md).
+  [LAUNCHER-JSON.md](LAUNCHER-JSON.md), [FEEDBACK.md](FEEDBACK.md) y [TAREAS-MANUALES.md](TAREAS-MANUALES.md), y las de la
+  1.0.6, en [MISIONES.md](MISIONES.md) y [EVENTOS-JUEGO.md](EVENTOS-JUEGO.md).
 - Cuando cambies algo que se describe aquí (un flujo, una carpeta, un intervalo, un texto que se cita), actualiza el
   documento en el mismo commit.
 - Los diagramas son [Mermaid](https://mermaid.js.org/) dentro del Markdown: GitHub los dibuja solo. Para editarlos con

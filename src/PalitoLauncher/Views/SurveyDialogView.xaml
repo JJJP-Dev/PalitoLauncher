@@ -161,11 +161,11 @@
                     </ItemsControl>
 
                     <!-- Apodo opcional -->
-                    <TextBlock Text="Tu nombre o apodo (opcional)" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                    <TextBlock Text="Tu nombre en Discord (opcional)" FontSize="14.5" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
                     <TextBlock Text="Para que el equipo sepa de quién es. Déjalo vacío si prefieres que sea anónima." Style="{StaticResource DimText}"
                                Margin="0,3,0,0" />
                     <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" MaxLength="40" Width="320" HorizontalAlignment="Left"
-                             Margin="0,10,0,18" AutomationProperties.Name="Tu nombre o apodo (opcional)" />
+                             Margin="0,10,0,18" AutomationProperties.Name="Tu nombre en Discord (opcional)" />
                 </StackPanel>
             </ScrollViewer>
 

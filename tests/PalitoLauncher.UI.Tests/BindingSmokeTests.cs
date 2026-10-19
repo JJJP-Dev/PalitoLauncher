@@ -68,6 +68,15 @@ public sealed class BindingSmokeTests
         vm.Settings.DeveloperMode = true;
         vm.Settings.SetPendingBugReports(2);
 
+        // 1.0.6: misiones de prueba (completada con pregunta de comprobación, pendiente con la nota abierta, con progreso
+        // y manual) y resultados pendientes de enviar en Ajustes.
+        var (missionSet, missionState) = TestMissions.Sample();
+        vm.ApplyMissionSet(missionSet, missionState);
+        Assert.True(vm.Missions.IsVisible);
+        vm.Missions.Items[1].FailedCommand.Execute(null);
+        Assert.True(vm.Missions.Items[1].IsEditingNote);
+        vm.Settings.SetPendingMissions(true, false, true);
+
         var window = new MainWindow(vm);
         var root = (FrameworkElement)window.Content;
         try
@@ -95,6 +104,14 @@ public sealed class BindingSmokeTests
             AssertShowsText(root, vm.NotesTitle);                   // «Qué ha cambiado desde tu versión (0.0.1 → 0.0.3)»
             AssertShowsText(root, vm.ReleaseNotesSections[1].Title);
             AssertShowsText(root, "itch.io");                       // enlace de comunidad
+            Assert.Contains(Descendants(root), d => d is MissionsCard);
+            AssertShowsText(root, vm.Missions.Title);
+            AssertShowsText(root, vm.Missions.ProgressText);          // «1 de 4 completadas»
+            AssertShowsText(root, "¿Se vio el titular?");             // comprobación de la completada
+            AssertShowsText(root, "¿Qué falló? (opcional)");          // nota abierta
+            AssertShowsText(root, "Progreso: 12 / 30");
+            AssertShowsText(root, "Márcala tú al terminar de probarla");
+            AssertShowsText(root, "Enviar resultados ahora");
 
             vm.NavigateCommand.Execute("Versions");
             await LayoutAsync(window);
@@ -124,6 +141,9 @@ public sealed class BindingSmokeTests
             AssertShowsText(root, "Reportar un problema");
             AssertShowsText(root, "Herramientas de desarrollo");
             AssertShowsText(root, "Abrir otra instancia del juego");
+            AssertShowsText(root, "Mostrar las misiones de prueba");
+            AssertShowsText(root, vm.Settings.PendingMissionsText);
+            AssertShowsText(root, "Tu nombre en Discord (opcional)");
 
             vm.NavigateCommand.Execute("Home");
             await LayoutAsync(window);

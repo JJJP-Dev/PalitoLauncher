@@ -133,7 +133,7 @@ public sealed partial class MainViewModel
 
         var gameDir = status.GameDir;
         var exe = GameExecutableName;
-        var arguments = BuildLaunchArguments();
+        var arguments = AppendExtraInstanceLog(BuildLaunchArguments()); // con su propio log: no cuenta para las misiones
         var launcher = ExtraInstanceLauncher;
         int pid = await Task.Run(() => launcher(gameDir, exe, arguments));
         Log.Info($"Modo desarrollador: instancia extra abierta (pid {pid}).");

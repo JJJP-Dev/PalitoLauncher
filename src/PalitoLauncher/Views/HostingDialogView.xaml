@@ -1,0 +1,195 @@
+<UserControl x:Class="PalitoLauncher.Views.HostingDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PalitoLauncher.ViewModels"
+             Focusable="False">
+    <UserControl.Resources>
+        <Style x:Key="IpText" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource MonoFont}" />
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="CopyButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+            <Setter Property="MinWidth" Value="90" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Resources>
+
+    <Border x:Name="DialogBorder" Width="560" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1" CornerRadius="12">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="32" ShadowDepth="6" Opacity="0.55" Color="Black" />
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Cabecera -->
+            <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="28,24,28,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource SubtleAccentBrush}" VerticalAlignment="Top"
+                            Margin="0,2,16,0">
+                        <TextBlock Text="&#xE968;" Style="{StaticResource GlyphText}" FontSize="19" Foreground="{StaticResource AccentBrush}"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Intro}" Style="{StaticResource BodyText}" Foreground="{StaticResource TextDimBrush}"
+                                   Margin="0,6,0,0" LineHeight="20" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <ScrollViewer x:Name="ContentScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Focusable="False" Padding="28,18,22,8">
+                <StackPanel Margin="0,0,6,0">
+                    <!-- IP en tu red (LAN), destacada -->
+                    <Border Background="{StaticResource BannerBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="16,12" Margin="0,0,0,14"
+                            Visibility="{Binding HasLanAddress, Converter={StaticResource BoolToVis}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{Binding LanTitle}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}" />
+                                <TextBlock Text="{Binding LanAddress.Address}" Style="{StaticResource IpText}" FontSize="22" Margin="0,4,0,0" />
+                                <TextBlock Style="{StaticResource DimText}" Margin="0,4,0,0">
+                                    <Run Text="{Binding LanAddress.InterfaceName, Mode=OneWay}" />
+                                    <Run Text="·" />
+                                    <Run Text="{Binding LanHint, Mode=OneWay}" />
+                                </TextBlock>
+                            </StackPanel>
+                            <Button x:Name="CopyLanButton" Grid.Column="1" Style="{StaticResource CopyButton}" Margin="12,0,0,0"
+                                    Command="{Binding LanAddress.CopyCommand}"
+                                    AutomationProperties.Name="{Binding LanAddress.CopyAutomationName}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE8C8;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                                    <TextBlock Text="Copiar" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Sin red -->
+                    <Border CornerRadius="8" Padding="12,9" BorderThickness="1" Margin="0,0,0,14" Background="{StaticResource WarningBannerBrush}"
+                            BorderBrush="{StaticResource WarningBrush}"
+                            Visibility="{Binding HasNoAddresses, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding NoAddressesText}" FontSize="13" TextWrapping="Wrap" Foreground="{StaticResource WarningBrush}" />
+                    </Border>
+
+                    <!-- Otras IP locales -->
+                    <StackPanel Margin="0,0,0,14" Visibility="{Binding HasOtherAddresses, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="{Binding OtherAddressesTitle}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                        <ItemsControl ItemsSource="{Binding OtherAddresses}" Focusable="False" IsTabStop="False" Margin="0,6,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:HostAddressViewModel}">
+                                    <Grid Margin="0,3,0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Address}" Style="{StaticResource IpText}" FontSize="14" />
+                                        <TextBlock Grid.Column="1" Text="{Binding InterfaceName}" Style="{StaticResource SmallDimText}"
+                                                   Margin="12,0,12,0" VerticalAlignment="Center" ToolTip="{Binding InterfaceName}" />
+                                        <Button Grid.Column="2" Style="{StaticResource GhostButton}" Content="Copiar" Command="{Binding CopyCommand}"
+                                                AutomationProperties.Name="{Binding CopyAutomationName}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- IP pública: solo si se pide -->
+                    <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="16,12" Margin="0,0,0,14">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Text="{Binding PublicIpTitle}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                                    <TextBlock Text="{Binding PublicIpHint}" Style="{StaticResource DimText}" Margin="0,2,0,0" />
+                                </StackPanel>
+                                <Button x:Name="ShowPublicIpButton" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                                        Content="{Binding ShowPublicIpText}" Command="{Binding ShowPublicIpCommand}"
+                                        AutomationProperties.Name="{Binding ShowPublicIpText}" />
+                            </Grid>
+                            <Grid Margin="0,10,0,0" Visibility="{Binding HasPublicIp, Converter={StaticResource BoolToVis}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding PublicIp}" Style="{StaticResource IpText}" TextTrimming="CharacterEllipsis" />
+                                <Button Grid.Column="1" Style="{StaticResource CopyButton}" Margin="12,0,0,0" Command="{Binding CopyPublicIpCommand}"
+                                        AutomationProperties.Name="Copiar la IP pública">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE8C8;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                                        <TextBlock Text="Copiar" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <TextBlock x:Name="PublicIpErrorText" Text="{Binding PublicIpError}" FontSize="13" TextWrapping="Wrap" Margin="0,8,0,0"
+                                       Foreground="{StaticResource DangerBrush}" AutomationProperties.LiveSetting="Assertive"
+                                       Visibility="{Binding HasPublicIpError, Converter={StaticResource BoolToVis}}" />
+                            <TextBlock Text="{Binding PublicIpNote}" Style="{StaticResource SmallDimText}" TextWrapping="Wrap" TextTrimming="None"
+                                       Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Puerto y notas de launcher.json -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8" Visibility="{Binding HasPort, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="&#xE839;" Style="{StaticResource GlyphText}" FontSize="13" Foreground="{StaticResource AccentBrush}"
+                                   Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding PortText}" FontSize="13.5" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Notes}" Style="{StaticResource BodyText}" FontSize="13.5" Margin="0,0,0,10"
+                               Visibility="{Binding HasNotes, Converter={StaticResource BoolToVis}}" />
+
+                    <!-- Abrir puertos / VPN -->
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
+                        <TextBlock Text="&#xE946;" Style="{StaticResource GlyphText}" FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                                   VerticalAlignment="Top" Margin="0,2,8,0" />
+                        <TextBlock Text="{Binding HelpText}" Style="{StaticResource DimText}" MaxWidth="470" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Pie -->
+            <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="28,14,28,20">
+                <DockPanel LastChildFill="True">
+                    <Button x:Name="CloseButton" DockPanel.Dock="Right" MinWidth="110" Margin="12,0,0,0" Style="{StaticResource AccentButton}"
+                            Content="Cerrar" Command="{Binding CloseCommand}" />
+                    <!-- «Copiado: …» o el aviso de portapapeles ocupado (se anuncia al lector de pantalla) -->
+                    <TextBlock x:Name="CopyStatusTextBlock" Text="{Binding CopyStatusText}" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"
+                               AutomationProperties.LiveSetting="Polite">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsCopyError}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

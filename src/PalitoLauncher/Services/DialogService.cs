@@ -50,11 +50,15 @@ public sealed class DialogService : ObservableObject
 
     public bool IsOpen => _currentDialog != null;
 
-    /// <summary>Muestra un mensaje con hasta tres botones y devuelve el pulsado.</summary>
+    /// <summary>
+    /// Muestra un mensaje con hasta tres botones y devuelve el pulsado. Esc equivale al botón secundario, salvo con
+    /// <paramref name="escapeChoosesSecondary"/> = false (el secundario es una acción, p.ej. «Reportar el problema»): entonces
+    /// Esc cierra con DialogResult.None.
+    /// </summary>
     public Task<DialogResult> ShowAsync(string title, string message, string primaryText, string? secondaryText = null,
-        bool isDanger = false, string? tertiaryText = null)
+        bool isDanger = false, string? tertiaryText = null, bool escapeChoosesSecondary = true)
     {
-        var dialog = new MessageDialogViewModel(title, message, primaryText, secondaryText, isDanger, tertiaryText);
+        var dialog = new MessageDialogViewModel(title, message, primaryText, secondaryText, isDanger, tertiaryText, escapeChoosesSecondary);
         return ShowDialogAsync(dialog, dialog.Completion);
     }
 
@@ -93,6 +97,37 @@ public sealed class DialogService : ObservableObject
         catch (Exception ex)
         {
             Log.Error("No se pudo abrir el selector de carpetas.", ex);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// «Guardar como» del sistema. <paramref name="filter"/> con el formato de Win32 ("Calendario (*.ics)|*.ics").
+    /// Devuelve la ruta elegida o null si se cancela o falla. Nunca lanza.
+    /// </summary>
+    public static string? PickSaveFile(string title, string fileName, string? initialDirectory, string filter, string defaultExtension)
+    {
+        try
+        {
+            var dialog = new SaveFileDialog
+            {
+                Title = title,
+                FileName = fileName,
+                Filter = filter,
+                DefaultExt = defaultExtension,
+                AddExtension = true,
+                OverwritePrompt = true,
+            };
+            var initial = NearestExistingDirectory(initialDirectory);
+            if (initial != null) dialog.InitialDirectory = initial;
+
+            var owner = Application.Current?.MainWindow;
+            var ok = owner is { IsVisible: true } ? dialog.ShowDialog(owner) : dialog.ShowDialog();
+            return ok == true && !string.IsNullOrWhiteSpace(dialog.FileName) ? dialog.FileName : null;
+        }
+        catch (Exception ex)
+        {
+            Log.Error("No se pudo abrir el diálogo para guardar el archivo.", ex);
             return null;
         }
     }

@@ -380,6 +380,135 @@ public class GameProcessManagerTests
         manager.Dispose();
         manager.Dispose(); // idempotente
         Assert.Throws<ObjectDisposedException>(() => manager.Launch(tmp.Path, FakeExe, null));
+        Assert.Throws<ObjectDisposedException>(() => manager.LaunchAdditionalInstance(tmp.Path, FakeExe, null));
         Assert.False(manager.TryAttachToRunning(tmp.Path, FakeExe));
+    }
+
+    // ---------------------------------------------------------------- instancias extra (modo desarrollador)
+
+    [Fact]
+    public void LaunchAdditionalInstance_MissingExecutable_ThrowsLauncherException()
+    {
+        using var tmp = new TempDir();
+        using var manager = new GameProcessManager();
+
+        var ex = Assert.Throws<LauncherException>(() => manager.LaunchAdditionalInstance(tmp.Path, "Coop2D.exe", null));
+        Assert.Contains("No se encuentra Coop2D.exe", ex.Message);
+        Assert.ThrowsAny<ArgumentException>(() => manager.LaunchAdditionalInstance("", FakeExe, null));
+        Assert.ThrowsAny<ArgumentException>(() => manager.LaunchAdditionalInstance(tmp.Path, " ", null));
+    }
+
+    [Fact]
+    public async Task LaunchAdditionalInstance_WhileGameIsRunning_StartsAnUntrackedProcess()
+    {
+        using var tmp = new TempDir();
+        var gameDir = CreateFakeGame(tmp);
+        try
+        {
+            using var manager = new GameProcessManager();
+            var started = 0;
+            var exitedEvents = 0;
+            manager.GameStarted += (_, _) => Interlocked.Increment(ref started);
+            manager.GameExited += (_, _) => Interlocked.Increment(ref exitedEvents);
+
+            manager.Launch(gameDir, FakeExe, "/c ping -n 60 127.0.0.1 >nul");
+            var trackedField = typeof(GameProcessManager)
+                .GetField("_process", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+            var trackedBefore = trackedField.GetValue(manager);
+
+            // Aunque el juego ya esté abierto, se abre otra instancia (Launch lanzaría «El juego ya está abierto.»).
+            var pid = manager.LaunchAdditionalInstance(gameDir, FakeExe, "/c ping -n 60 127.0.0.1 >nul");
+
+            Assert.True(pid > 0);
+            Assert.NotEqual(Environment.ProcessId, pid);
+            var path = GameProcessManager.TryGetProcessImagePath(pid);
+            Assert.NotNull(path);
+            Assert.Equal(Path.Combine(gameDir, FakeExe), path, ignoreCase: true);
+
+            // No cambia lo que se sigue ni dispara eventos.
+            await Task.Delay(200);
+            Assert.Same(trackedBefore, trackedField.GetValue(manager));
+            Assert.True(manager.IsRunning);
+            Assert.Equal(1, Volatile.Read(ref started));
+            Assert.Equal(0, Volatile.Read(ref exitedEvents));
+
+            // Kill cierra todas las instancias que se ejecutan desde la carpeta del juego (si no, lanzaría).
+            manager.Kill(gameDir, FakeExe);
+            Assert.False(GameProcessManager.IsRunningFrom(gameDir, FakeExe));
+        }
+        finally
+        {
+            KillLeftovers(tmp.Path);
+        }
+    }
+
+    [Fact]
+    public async Task LaunchAdditionalInstance_ExitOfExtraInstance_DoesNotRaiseGameExited()
+    {
+        using var tmp = new TempDir();
+        var gameDir = CreateFakeGame(tmp);
+        try
+        {
+            using var manager = new GameProcessManager();
+            var exitedEvents = 0;
+            manager.GameExited += (_, _) => Interlocked.Increment(ref exitedEvents);
+
+            // Sin juego seguido: la instancia extra tampoco pasa a seguirse.
+            var pid = manager.LaunchAdditionalInstance(gameDir, FakeExe, "/c exit 4");
+            Assert.True(pid > 0);
+            Assert.False(manager.IsRunning);
+
+            await WaitUntilAsync(() => !GameProcessManager.IsRunningFrom(gameDir, FakeExe), TimeSpan.FromSeconds(10));
+            await Task.Delay(200);
+            Assert.Equal(0, Volatile.Read(ref exitedEvents));
+            Assert.False(manager.IsRunning);
+        }
+        finally
+        {
+            KillLeftovers(tmp.Path);
+        }
+    }
+
+    [Fact]
+    public void LaunchAdditionalInstance_UsesGameFolderAsWorkingDirectory()
+    {
+        using var tmp = new TempDir();
+        var gameDir = CreateFakeGame(tmp);
+        var marker = Path.Combine(gameDir, "cwd.txt");
+        try
+        {
+            using var manager = new GameProcessManager();
+
+            // cmd escribe su carpeta de trabajo en cwd.txt (ruta relativa: solo sale bien si WorkingDirectory = gameDir).
+            var pid = manager.LaunchAdditionalInstance(gameDir, FakeExe, "/c cd > cwd.txt");
+            Assert.True(pid > 0);
+
+            var sw = Stopwatch.StartNew();
+            string? content = null;
+            while (sw.Elapsed < TimeSpan.FromSeconds(10))
+            {
+                try
+                {
+                    if (File.Exists(marker))
+                    {
+                        content = File.ReadAllText(marker).Trim();
+                        if (content.Length > 0)
+                            break;
+                    }
+                }
+                catch (IOException)
+                {
+                    // cmd aún lo tiene abierto
+                }
+
+                Thread.Sleep(50);
+            }
+
+            Assert.Equal(gameDir.TrimEnd('\\'), content, ignoreCase: true);
+        }
+        finally
+        {
+            KillLeftovers(tmp.Path);
+        }
     }
 }

@@ -414,6 +414,27 @@ public sealed partial class MainViewModel
         bool isLatest = latest != null && latest.Asset.Id == release.Asset.Id;
         var status = _installStatus;
 
+        // launcher.json: build con un problema grave conocido. Si reemplaza a la instalada, el aviso va en la propia
+        // confirmación de abajo; si no, se pregunta antes de elegir carpeta.
+        var block = FindBlockSafe(release);
+        string? blockedReason = block == null ? null : string.IsNullOrWhiteSpace(block.Reason) ? "tiene un fallo grave." : block.Reason.Trim();
+        bool replacesInstalled = _installRoot != null && status is { State: not InstallState.NotInstalled and not InstallState.DriveMissing };
+        if (blockedReason != null && !replacesInstalled)
+        {
+            var confirm = await Dialogs.ShowAsync("Versión con problemas",
+                $"{release.VersionDisplay} tiene un problema conocido: {blockedReason}\n\n¿Instalarla igualmente?",
+                "Instalar igualmente", "Cancelar", isDanger: true);
+            if (confirm != DialogResult.Primary) return;
+            if (IsBusy)
+            {
+                ShowToast(BusyMessage);
+                return;
+            }
+            latest = Latest;
+            isLatest = latest != null && latest.Asset.Id == release.Asset.Id;
+            status = _installStatus;
+        }
+
         if (status?.State == InstallState.DriveMissing)
         {
             // Se ofrece instalar en otra carpeta (solo si el usuario lo elige; nunca en otro sitio por su cuenta).
@@ -457,8 +478,12 @@ public sealed partial class MainViewModel
             message += "\n\nOjo: es más antigua que la versión instalada. Para jugar en cooperativo todos tenéis que usar la misma versión.";
         if (!isLatest)
             message += "\n\nMientras uses esta versión no se actualizará sola (hasta que salga otra más nueva).";
+        if (blockedReason != null)
+            message += $"\n\nAtención: esta versión tiene un problema conocido: {blockedReason}";
 
-        var answer = await Dialogs.ShowAsync($"Instalar {release.VersionDisplay}", message, "Instalar", "Cancelar");
+        var answer = blockedReason != null
+            ? await Dialogs.ShowAsync($"Instalar {release.VersionDisplay}", message, "Instalar igualmente", "Cancelar", isDanger: true)
+            : await Dialogs.ShowAsync($"Instalar {release.VersionDisplay}", message, "Instalar", "Cancelar");
         if (answer != DialogResult.Primary) return;
 
         if (!await EnsureGameClosedAsync(GameInstaller.GetGameDir(root))) return;
@@ -773,8 +798,13 @@ public sealed partial class MainViewModel
         var status = _installStatus;
         if (status?.State != InstallState.Installed || string.IsNullOrEmpty(status.GameDir) || IsGameRunning) return;
 
+        // launcher.json: la versión instalada tiene un problema conocido → «¿Jugar igualmente?» (solo avisa).
+        if (!await ConfirmPlayBlockedBuildAsync(status.Info)) return;
+        status = _installStatus; // pudo cambiar mientras se preguntaba
+        if (status?.State != InstallState.Installed || string.IsNullOrEmpty(status.GameDir) || IsGameRunning || IsBusy) return;
+
         var exe = GameExecutableName;
-        var arguments = _settings.LaunchArguments;
+        var arguments = BuildLaunchArguments(); // modo de pantalla + argumentos del usuario (que mandan)
         try
         {
             await Task.Run(() => _process.Launch(status.GameDir, exe, arguments));
@@ -1459,10 +1489,21 @@ public sealed partial class MainViewModel
             ["Límite de descarga (KB/s)"] = _settings.MaxDownloadSpeedKBps.ToString(inv),
             ["Conservar descargas"] = _settings.KeepDownloadedArchives ? "sí" : "no",
             ["Al abrir el juego"] = _settings.AfterLaunch.ToString(),
+            ["Modo de pantalla"] = LaunchProfileNameSafe(_settings.LaunchProfile),
             ["Argumentos de lanzamiento"] = _settings.LaunchArguments,
+            ["Argumentos al abrir el juego"] = BuildLaunchArguments(),
+            ["Modo desarrollador"] = _settings.DeveloperMode ? "sí" : "no",
             ["Roadmap"] = RoadmapDiagnosticText(),
             ["Opiniones pendientes de enviar"] = _feedback == null ? "(envío no disponible)" : _pendingFeedbackCount.ToString(inv),
             ["Pedir opinión tras la partida"] = _settings.AskFeedbackAfterSession ? "sí" : "no",
+            ["Reportes pendientes de enviar"] = _bugReports == null ? "(envío no disponible)" : _pendingBugReportCount.ToString(inv),
+            ["launcher.json"] = ManifestDiagnosticText(),
+            ["Anuncios visibles"] = Announcements.Count > 0 ? string.Join(" | ", Announcements.Select(a => $"{a.Kind}: {a.Title}")) : "ninguno",
+            ["Versión instalada con problemas"] = FindInstalledBlockSafe()?.Reason ?? "no",
+            ["Próxima sesión de prueba"] = _playtestStatus is { } playtest
+                ? $"{playtest.Playtest.Id} ({playtest.Playtest.StartsUtc.ToString("u", inv)}{(playtest.IsOngoing ? ", en curso" : "")})"
+                : "ninguna",
+            ["Avisar antes de las sesiones"] = _settings.PlaytestRemindersEnabled ? "sí" : "no",
             ["Aviso en pantalla"] = SecondaryNoticeText,
             ["Texto de estado"] = StatusText,
         };
@@ -1505,10 +1546,16 @@ public sealed partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// Diálogo de error. Con <paramref name="offerReport"/>: «Reportar el problema» (abre «Reportar un problema» con el
+    /// error en el resumen) y «Crear informe» (zip en el Escritorio). Esc equivale a «Aceptar», nunca a reportar.
+    /// </summary>
     private async Task ShowErrorAsync(string message, string title = "No se pudo completar", bool offerReport = true)
     {
-        var result = await Dialogs.ShowAsync(title, message, "Aceptar", null, false, offerReport ? "Crear informe" : null);
+        var result = await Dialogs.ShowAsync(title, message, "Aceptar", offerReport ? "Reportar el problema" : null, false,
+            offerReport ? "Crear informe" : null, escapeChoosesSecondary: false);
         if (result == DialogResult.Tertiary) await CreateReportAsync();
+        else if (result == DialogResult.Secondary) RunFlow(() => ReportErrorAsync(title, message), "Reportar el problema");
     }
 
     /// <summary>Diálogo amable para errores no controlados (lo usa la App). Nunca lanza.</summary>
@@ -1566,8 +1613,10 @@ public sealed partial class MainViewModel
                 ? "Hay una descarga en curso. Si cierras ahora quedará en pausa y podrás continuarla la próxima vez."
                 : "Hay una operación en curso. Si cierras ahora se cancelará.";
 
-        // Una encuesta abierta (vacía: con respuestas ya se preguntó antes) dejaría esta pregunta esperando detrás, sin verse.
+        // Una encuesta o un reporte abiertos (vacíos: con texto ya se preguntó antes) dejarían esta pregunta esperando
+        // detrás, sin verse.
         CloseEmptySurvey();
+        CloseEmptyBugReport();
         var answer = await Dialogs.ShowAsync("¿Cerrar el launcher?", message, "Cerrar", "Seguir");
         if (answer != DialogResult.Primary) return false;
         if (!IsBusy) return true;

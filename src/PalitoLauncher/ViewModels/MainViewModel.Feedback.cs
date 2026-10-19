@@ -206,20 +206,26 @@ public sealed partial class MainViewModel
     private bool CanOpenSurvey => !_surveyOpen && _operationKind != OperationKind.LauncherUpdate;
 
     /// <summary>
-    /// La encuesta está abierta con respuestas sin enviar: cerrar el launcher las perdería. No notifica cambios (lo consulta
-    /// la ventana al cerrar).
+    /// La encuesta tiene respuestas sin enviar o «Reportar un problema» tiene texto sin enviar: cerrar el launcher los
+    /// perdería. No notifica cambios (lo consulta la ventana al cerrar).
     /// </summary>
-    public bool HasUnsentFeedback => _openSurvey is { HasUnsentAnswers: true };
+    public bool HasUnsentFeedback => _openSurvey is { HasUnsentAnswers: true } || _openBugReport is { HasUnsentText: true };
 
     /// <summary>
-    /// Antes de cerrar el launcher: si la encuesta tiene respuestas sin enviar, ella misma pregunta «Tienes una opinión sin
-    /// enviar. ¿Salir sin enviarla?» [Salir] [Volver]. True = se puede cerrar (la encuesta se descartó o no había nada que
-    /// perder); false = el usuario volvió a la encuesta.
+    /// Antes de cerrar el launcher: la encuesta (o el reporte) con algo sin enviar pregunta él mismo «¿Salir sin
+    /// enviarla/enviarlo?» [Salir] [Volver]; primero el que se está viendo. True = se puede cerrar (se descartó o no había
+    /// nada que perder); false = el usuario volvió al diálogo.
     /// </summary>
-    public Task<bool> ConfirmCloseWithUnsentFeedbackAsync()
+    public async Task<bool> ConfirmCloseWithUnsentFeedbackAsync()
     {
         var survey = _openSurvey;
-        return survey == null ? Task.FromResult(true) : survey.ConfirmExitAsync();
+        var report = _openBugReport;
+        bool reportFirst = report != null && ReferenceEquals(Dialogs.CurrentDialog, report);
+
+        if (reportFirst && !await report!.ConfirmExitAsync()) return false;
+        if (survey != null && !await survey.ConfirmExitAsync()) return false;
+        if (!reportFirst && report != null && !await report.ConfirmExitAsync()) return false;
+        return true;
     }
 
     /// <summary>Cierra la encuesta abierta si está vacía (no hay nada que perder). Para que no tape otra pregunta.</summary>
@@ -296,13 +302,7 @@ public sealed partial class MainViewModel
     /// </summary>
     private async Task<FeedbackSendOutcome> SubmitFeedbackAsync(FeedbackSubmission submission, SurveyDefinition survey)
     {
-        var nickname = string.IsNullOrWhiteSpace(submission.Nickname) ? null : submission.Nickname.Trim();
-        if (!string.Equals(nickname ?? "", _settings.FeedbackNickname ?? "", StringComparison.Ordinal))
-        {
-            _settings.FeedbackNickname = nickname;
-            _ = SaveSettingsAsync();
-            Settings.ReloadFeedbackSettings();
-        }
+        RememberFeedbackNickname(submission.Nickname);
 
         if (_feedback == null)
             throw new LauncherException("No se pudo preparar el envío de opiniones. Cierra y vuelve a abrir el launcher e inténtalo de nuevo.");
@@ -310,6 +310,16 @@ public sealed partial class MainViewModel
         var outcome = await _feedback.SubmitAsync(submission, survey.DiscordWebhookUrl, _lifetimeCts.Token);
         Log.Info($"Opinión {submission.Id} ({submission.Trigger}, encuesta «{submission.SurveyId}»): {outcome}.");
         return outcome;
+    }
+
+    /// <summary>Recuerda el nombre o apodo (si cambió) para la próxima opinión o reporte. Vacío = anónimo.</summary>
+    private void RememberFeedbackNickname(string? value)
+    {
+        var nickname = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        if (string.Equals(nickname ?? "", _settings.FeedbackNickname ?? "", StringComparison.Ordinal)) return;
+        _settings.FeedbackNickname = nickname;
+        _ = SaveSettingsAsync();
+        Settings.ReloadFeedbackSettings();
     }
 
     /// <summary>Versión instalada ahora mismo (null si no hay juego instalado).</summary>

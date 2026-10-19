@@ -4,6 +4,10 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- Solo para la notificación de Windows (NotifyIcon) del aviso de las sesiones de prueba. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- WFO0003 es un consejo para apps WinForms (PPP en el manifiesto); aquí la ventana es WPF y el manifiesto es el correcto. -->
+    <NoWarn>$(NoWarn);WFO0003</NoWarn>
     <RootNamespace>PalitoLauncher</RootNamespace>
     <AssemblyName>PalitoLauncher</AssemblyName>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
@@ -31,6 +35,13 @@
     <Resource Include="Assets\logo_white.png" />
     <Resource Include="Assets\app.ico" />
     <None Remove="Assets\logo_source.png" />
+  </ItemGroup>
+
+  <!-- UseWindowsForms añade "global using System.Windows.Forms/System.Drawing", que chocan con los tipos de WPF
+       (Application, UserControl, Brush…): se quitan y los pocos tipos de WinForms se escriben con su nombre completo. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>

@@ -37,6 +37,31 @@ internal static class MainViewModelAccess
     [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "UpdateState")]
     public static extern void UpdateState(MainViewModel vm);
 
+    // ───────────── launcher.json ─────────────
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "LaunchGameAsync")]
+    public static extern Task LaunchGameAsync(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "InstallSpecificReleaseAsync")]
+    public static extern Task InstallSpecificReleaseAsync(MainViewModel vm, GameRelease release);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "RebuildReleaseItems")]
+    public static extern void RebuildReleaseItems(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_initialized")]
+    public static extern ref bool Initialized(MainViewModel vm);
+
+    [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_installRoot")]
+    public static extern ref string? InstallRoot(MainViewModel vm);
+
+    /// <summary>Instalación en disco simulada y lista de Versiones/estado recalculados (sin tocar el disco).</summary>
+    public static void SetInstalled(MainViewModel vm, InstallStatus status)
+    {
+        InstallStatus(vm) = status;
+        RebuildReleaseItems(vm);
+        UpdateState(vm);
+    }
+
     // ───────────── Partida (sin juego real) ─────────────
 
     [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "_installStatus")]

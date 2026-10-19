@@ -1,0 +1,122 @@
+{
+  "id": "pre2-fun-test-final",
+  "title": "Prueba de diversión · Prototipo 2",
+  "intro": "Queremos saber si combinar elementos con tus compañeros es divertido. Responde con sinceridad: si algo no divierte, es justo lo que necesitamos saber.",
+  "askAfterSession": true,
+  "minSessionMinutes": 10,
+  "minHoursBetweenPrompts": 12,
+  "discordWebhookUrl": "https://discord.com/api/webhooks/1561612540679561276/SxyhbBfJftULXOGKOhdocP63eXk1Jgyp3viYrpy5cpVVFNjdLWG3cj5XVqxKfUXGFMg2",
+  "questions": [
+    {
+      "id": "overall",
+      "type": "rating",
+      "text": "En general, ¿qué tal la partida?",
+      "required": true
+    },
+    {
+      "id": "combo-fun",
+      "type": "scale",
+      "text": "¿Fue divertido combinar elementos con tus compañeros?",
+      "required": true,
+      "min": 1,
+      "max": 5,
+      "minLabel": "Nada divertido",
+      "maxLabel": "Muy divertido"
+    },
+    {
+      "id": "detonate-clear",
+      "type": "choice",
+      "text": "¿Entendiste cuándo detonar una reacción?",
+      "required": true,
+      "hint": "Según lo que notaste jugando, no lo que te hayan explicado.",
+      "options": [
+        "Sí, lo tuve claro",
+        "Más o menos",
+        "No, las reacciones salían por casualidad"
+      ]
+    },
+    {
+      "id": "duo-vs-solo",
+      "type": "choice",
+      "text": "¿Qué reacciones te resultaron más divertidas?",
+      "options": [
+        "Las que hacía con un compañero (dúo)",
+        "Las que hacía yo solo",
+        "Me daban igual",
+        "No noté la diferencia"
+      ]
+    },
+    {
+      "id": "coordination",
+      "type": "choice",
+      "text": "¿Os poníais de acuerdo para provocar reacciones?",
+      "options": [
+        "Sí, lo hablábamos",
+        "A veces, sin hablarlo",
+        "No, cada uno iba a lo suyo"
+      ]
+    },
+    {
+      "id": "feedback-clarity",
+      "type": "scale",
+      "text": "¿Se entendía en pantalla qué reacción salía y quién la provocaba?",
+      "min": 1,
+      "max": 5,
+      "minLabel": "Nada claro",
+      "maxLabel": "Muy claro"
+    },
+    {
+      "id": "favorite-reaction",
+      "type": "choice",
+      "text": "¿Qué reacción te gustó más?",
+      "options": [
+        "Electrocución",
+        "Vapor",
+        "Sobrecarga",
+        "No me fijé"
+      ]
+    },
+    {
+      "id": "again",
+      "type": "choice",
+      "text": "¿Te apetece volver a jugar?",
+      "options": [
+        "Sí, otra partida ya",
+        "Sí, otro día",
+        "No mucho"
+      ]
+    },
+    {
+      "id": "players",
+      "type": "choice",
+      "text": "¿Cuántos jugabais?",
+      "options": [
+        "Solo",
+        "2",
+        "3",
+        "4"
+      ]
+    },
+    {
+      "id": "issues",
+      "type": "multi",
+      "text": "¿Tuviste algún problema?",
+      "hint": "Marca todos los que quieras.",
+      "options": [
+        "Lag o desconexiones",
+        "El juego se cerró",
+        "Va lento o a tirones",
+        "Fallos visuales",
+        "Controles incómodos",
+        "Ninguno"
+      ]
+    },
+    {
+      "id": "improve",
+      "type": "text",
+      "text": "¿Qué cambiarías para que combinar elementos fuera más divertido?",
+      "maxLength": 1000,
+      "placeholder": "Lo que se te ocurra: qué sobraba, qué faltaba, qué te frustró…"
+    }
+  ]
+}

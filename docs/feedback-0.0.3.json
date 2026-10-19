@@ -1,0 +1,96 @@
+{
+  "id": "pre2-0.0.3-test",
+  "title": "Tu opinión sobre la 0.0.3 · Prototipo 2",
+  "intro": "Esta versión da más vida a los enemigos, añade temblor de pantalla y busca el origen de los tirones de la última prueba.\nSi notaste congelaciones, dinos cuándo: junto con los registros del juego, nos dirá qué falla.",
+  "askAfterSession": true,
+  "minSessionMinutes": 10,
+  "minHoursBetweenPrompts": 12,
+  "discordWebhookUrl": "https://discord.com/api/webhooks/1561612540679561276/SxyhbBfJftULXOGKOhdocP63eXk1Jgyp3viYrpy5cpVVFNjdLWG3cj5XVqxKfUXGFMg2",
+  "questions": [
+    {
+      "id": "overall",
+      "type": "rating",
+      "text": "En general, ¿qué tal la partida?",
+      "required": true
+    },
+    {
+      "id": "crowd-reactions",
+      "type": "choice",
+      "text": "En los grupos grandes de enemigos, ¿conseguíais provocar varias reacciones seguidas?",
+      "options": [
+        "Sí, muchas",
+        "Alguna",
+        "Casi nunca",
+        "No lo probamos"
+      ]
+    },
+    {
+      "id": "enemy-toughness",
+      "type": "scale",
+      "text": "¿Cuánto aguantan los enemigos?",
+      "hint": "El 3 es lo justo.",
+      "min": 1,
+      "max": 5,
+      "minLabel": "Caen enseguida",
+      "maxLabel": "Aguantan demasiado"
+    },
+    {
+      "id": "camera-shake",
+      "type": "choice",
+      "text": "¿Qué te pareció el temblor de pantalla al provocar reacciones?",
+      "options": [
+        "Está bien así",
+        "Se nota poco",
+        "Es demasiado",
+        "No lo noté"
+      ]
+    },
+    {
+      "id": "issues",
+      "type": "multi",
+      "text": "¿Tuviste algún problema?",
+      "hint": "Marca todos los que quieras.",
+      "options": [
+        "Lag o desconexiones",
+        "El juego se cerró",
+        "Va lento o a tirones",
+        "Fallos visuales",
+        "Controles incómodos",
+        "Ninguno"
+      ]
+    },
+    {
+      "id": "stutter-when",
+      "type": "multi",
+      "text": "Si notaste tirones o congelaciones, ¿cuándo pasaban?",
+      "required": true,
+      "hint": "Marca todos los momentos que recuerdes. Si no notaste ninguno, marca «Ninguno».",
+      "options": [
+        "Con muchos enemigos en pantalla",
+        "Al provocar reacciones en un grupo",
+        "Al morir muchos enemigos a la vez",
+        "Justo después de usar el panel de trucos",
+        "Tras mucho rato de partida",
+        "Sin motivo claro",
+        "Ninguno"
+      ]
+    },
+    {
+      "id": "role",
+      "type": "choice",
+      "text": "¿Cómo jugaste?",
+      "hint": "Nos ayuda a cruzar tu respuesta con los registros del juego.",
+      "options": [
+        "Creé la partida (host)",
+        "Me uní a la partida de otro"
+      ]
+    },
+    {
+      "id": "improve",
+      "type": "text",
+      "text": "¿Qué notaste raro o qué cambiarías?",
+      "maxLength": 1000,
+      "placeholder": "Un fallo, algo que no se entendía, lo que te frustró… Si hubo una congelación, ¿a qué hora más o menos?"
+    }
+  ]
+}

@@ -82,11 +82,24 @@
             <Border Style="{StaticResource SettingsCard}">
                 <StackPanel>
                     <TextBlock Text="Juego" Style="{StaticResource SectionTitleText}" />
-                    <TextBlock Text="Argumentos de lanzamiento" Style="{StaticResource BodyText}" Margin="0,14,0,6" />
+                    <!-- Perfil de lanzamiento (se combina con los argumentos de abajo, que mandan) -->
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Modo de pantalla" Style="{StaticResource BodyText}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" Width="240" ItemsSource="{Binding LaunchProfileOptions}"
+                                  SelectedItem="{Binding SelectedLaunchProfile}" DisplayMemberPath="Label"
+                                  AutomationProperties.Name="Modo de pantalla" />
+                    </Grid>
+                    <TextBlock Text="Cómo se abre el juego: en ventana, a pantalla completa… «Lo que diga el juego» usa la configuración del propio juego."
+                               Style="{StaticResource DimText}" Margin="0,4,0,0" />
+                    <TextBlock Text="Argumentos de lanzamiento" Style="{StaticResource BodyText}" Margin="0,16,0,6" />
                     <TextBox x:Name="LaunchArgumentsBox" Text="{Binding LaunchArguments, UpdateSourceTrigger=PropertyChanged}"
                              LostKeyboardFocus="LaunchArgumentsBox_LostKeyboardFocus"
                              AutomationProperties.Name="Argumentos de lanzamiento" />
-                    <TextBlock Text="Opcional. Ejemplo: -screen-fullscreen 0 -screen-width 1280 -screen-height 720"
+                    <TextBlock Text="Opcional, para usuarios avanzados. Se añaden después del modo de pantalla y mandan sobre él. Ejemplo: -screen-width 1600 -screen-height 900"
                                Style="{StaticResource DimText}" Margin="0,4,0,0" />
                     <Grid Margin="0,16,0,0">
                         <Grid.ColumnDefinitions>
@@ -98,6 +111,12 @@
                                   SelectedItem="{Binding SelectedAfterLaunch}" DisplayMemberPath="Label"
                                   AutomationProperties.Name="Al abrir el juego" />
                     </Grid>
+
+                    <!-- Sesiones de prueba (launcher.json) -->
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,16,0,0"
+                              Content="Avisarme antes de las sesiones de prueba" IsChecked="{Binding PlaytestRemindersEnabled}" />
+                    <TextBlock Text="Si el launcher está abierto, te avisa con una notificación de Windows 15 minutos antes de que empiece una sesión."
+                               Style="{StaticResource DimText}" Margin="0,4,58,0" />
 
                     <!-- Opiniones -->
                     <Border Height="1" Background="{StaticResource BorderBrush}" Margin="0,18,0,0" />
@@ -150,13 +169,86 @@
                         <Button Grid.Column="2" Style="{StaticResource SettingsButton}" Margin="12,0,0,0" Content="Reintentar envío"
                                 Command="{Binding RetryFeedbackSendCommand}" />
                     </Grid>
-                    <Button Style="{StaticResource SettingsButton}" HorizontalAlignment="Left" Margin="0,14,0,0"
-                            Command="{Binding SendFeedbackCommand}" AutomationProperties.Name="Enviar opinión">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE939;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
-                            <TextBlock Text="Enviar opinión" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </Button>
+                    <!-- Reportes de problemas pendientes (misma presentación que las opiniones) -->
+                    <Grid Margin="0,14,0,0" Visibility="{Binding HasPendingBugReports, Converter={StaticResource BoolToVis}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource GlyphText}">
+                                    <Setter Property="FontSize" Value="13" />
+                                    <Setter Property="Text" Value="&#xE896;" />
+                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PendingBugReportsWaitForTeam}" Value="True">
+                                            <Setter Property="Text" Value="&#xE946;" />
+                                            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" Text="{Binding PendingBugReportsText}" FontSize="13" VerticalAlignment="Center"
+                                   TextWrapping="Wrap">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PendingBugReportsWaitForTeam}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Button Grid.Column="2" Style="{StaticResource SettingsButton}" Margin="12,0,0,0" Content="Reintentar envío"
+                                Command="{Binding RetryBugReportSendCommand}" AutomationProperties.Name="Reintentar envío de los reportes" />
+                    </Grid>
+                    <WrapPanel Margin="0,14,0,0">
+                        <Button Style="{StaticResource SettingsButton}" Command="{Binding SendFeedbackCommand}" AutomationProperties.Name="Enviar opinión">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE939;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Enviar opinión" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource SettingsButton}" Command="{Binding ReportProblemCommand}" AutomationProperties.Name="Reportar un problema">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xEBE8;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Reportar un problema" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <Button Style="{StaticResource SettingsButton}" Command="{Binding ShowHostingCommand}" AutomationProperties.Name="Hostear partida: mi IP">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE968;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Hostear partida: mi IP" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </WrapPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Herramientas de desarrollo -->
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel>
+                    <TextBlock Text="Herramientas de desarrollo" Style="{StaticResource SectionTitleText}" />
+                    <CheckBox Style="{StaticResource ToggleSwitch}" Margin="0,14,0,0"
+                              Content="Modo desarrollador" IsChecked="{Binding DeveloperMode}" />
+                    <TextBlock Text="Muestra herramientas para probar el juego, como abrir varias ventanas del juego a la vez. No hace falta para jugar."
+                               Style="{StaticResource DimText}" Margin="0,4,58,0" />
+                    <StackPanel Margin="0,14,0,0" Visibility="{Binding DeveloperMode, Converter={StaticResource BoolToVis}}">
+                        <Button Style="{StaticResource SettingsButton}" HorizontalAlignment="Left" Command="{Binding LaunchExtraInstanceCommand}"
+                                AutomationProperties.Name="Abrir otra instancia del juego">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8A7;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                                <TextBlock Text="Abrir otra instancia del juego" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Style="{StaticResource DimText}" Margin="0,0,58,0"
+                                   Text="Útil para probar host y cliente en tu PC (se abre con el mismo modo de pantalla y argumentos). Si el juego tiene «Force Single Instance» activado en Unity, no se abrirá otra ventana. También está junto a JUGAR y en el menú ⋯." />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

@@ -1,0 +1,103 @@
+<UserControl x:Class="PalitoLauncher.Views.PlaytestCard"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="False">
+    <!-- DataContext: PlaytestCardViewModel. En curso o a punto de empezar, el borde pasa al color de acento. -->
+    <Border AutomationProperties.Name="{Binding HeaderText}">
+        <Border.Style>
+            <Style TargetType="Border" BasedOn="{StaticResource Card}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSoon}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <StackPanel>
+            <!-- Cabecera: icono + «Próxima sesión de prueba» -->
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE787;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
+                           Margin="0,0,10,0" />
+                <TextBlock Text="{Binding HeaderText}" Style="{StaticResource SmallDimText}" FontSize="12.5" FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+            </StackPanel>
+
+            <TextBlock Text="{Binding Title}" FontSize="19" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                       TextWrapping="Wrap" Margin="0,8,0,0" />
+
+            <!-- Cuándo (hora local) y cuenta atrás -->
+            <WrapPanel Margin="0,8,0,0">
+                <Border Style="{StaticResource Chip}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE823;" Style="{StaticResource GlyphText}" FontSize="13" Foreground="{StaticResource TextDimBrush}" Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding WhenText}" FontSize="13" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="{Binding CountdownText}" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource AccentBrush}"
+                           VerticalAlignment="Center" Margin="4,0,0,8" AutomationProperties.LiveSetting="Polite" />
+            </WrapPanel>
+
+            <TextBlock Text="{Binding Description}" Style="{StaticResource BodyText}" Foreground="{StaticResource TextDimBrush}"
+                       Margin="0,4,0,0" Visibility="{Binding HasDescription, Converter={StaticResource BoolToVis}}" />
+
+            <!-- Versión que pide la sesión: ✓ correcta, o «Necesitas X» + Actualizar / Instalar esa versión -->
+            <Grid Margin="0,12,0,0" Visibility="{Binding HasVersionInfo, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Margin="0,0,8,0" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock" BasedOn="{StaticResource GlyphText}">
+                            <Setter Property="FontSize" Value="14" />
+                            <Setter Property="Text" Value="&#xE7BA;" />
+                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsVersionOk}" Value="True">
+                                    <Setter Property="Text" Value="&#xE73E;" />
+                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Grid.Column="1" Text="{Binding VersionText}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                           TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsVersionOk}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource SuccessBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Button Grid.Column="2" Style="{StaticResource AccentButton}" Margin="12,0,0,0" Content="{Binding VersionActionText}"
+                        Command="{Binding VersionActionCommand}"
+                        Visibility="{Binding HasVersionAction, Converter={StaticResource BoolToVis}}" />
+            </Grid>
+            <TextBlock Text="{Binding VersionHint}" Style="{StaticResource DimText}" Margin="22,4,0,0"
+                       Visibility="{Binding HasVersionHint, Converter={StaticResource BoolToVis}}" />
+
+            <WrapPanel Margin="0,14,0,0">
+                <Button Margin="0,0,8,0" Command="{Binding AddToCalendarCommand}" AutomationProperties.Name="Añadir al calendario"
+                        ToolTip="Guarda un archivo de calendario (.ics) para añadir la sesión a Outlook, Google Calendar…">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE787;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                        <TextBlock Text="Añadir al calendario" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button Command="{Binding JoinDiscordCommand}" AutomationProperties.Name="Unirme al Discord"
+                        Visibility="{Binding HasDiscord, Converter={StaticResource BoolToVis}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8BD;" Style="{StaticResource GlyphText}" FontSize="13" Margin="0,0,8,0" />
+                        <TextBlock Text="Unirme al Discord" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+            </WrapPanel>
+        </StackPanel>
+    </Border>
+</UserControl>

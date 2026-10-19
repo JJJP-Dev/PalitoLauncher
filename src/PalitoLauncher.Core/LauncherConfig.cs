@@ -51,6 +51,16 @@ public static class LauncherConfig
     public const string RemoteFeedbackConfigUrl =
         "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/feedback.json";
 
+    /// <summary>
+    /// Manifiesto opcional del launcher en el repo del juego: anuncios, builds con problemas, enlaces de comunidad, sesiones
+    /// de prueba, datos para hostear y el webhook de reportes de problemas. Ver docs/LAUNCHER-JSON.md.
+    /// </summary>
+    public const string RemoteManifestUrl =
+        "https://raw.githubusercontent.com/" + GameRepoOwner + "/" + GameRepoName + "/main/launcher/launcher.json";
+
+    /// <summary>Cada cuánto se vuelve a leer launcher.json mientras el launcher está abierto (raw: no gasta cupo de la API).</summary>
+    public static readonly TimeSpan ManifestRefreshInterval = TimeSpan.FromMinutes(15);
+
     /// <summary>Respuestas de /milestones más recientes que esto se reutilizan sin preguntar (el roadmap cambia despacio).</summary>
     public static readonly TimeSpan MilestonesFreshnessWindow = TimeSpan.FromMinutes(10);
 

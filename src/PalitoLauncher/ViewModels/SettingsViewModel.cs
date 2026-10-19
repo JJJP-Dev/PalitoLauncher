@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using PalitoLauncher.Core;
 using PalitoLauncher.Core.Install;
+using PalitoLauncher.Core.Launch;
 using PalitoLauncher.Core.Logging;
 using PalitoLauncher.Core.Settings;
 using PalitoLauncher.Core.Update;
@@ -18,6 +19,9 @@ public sealed record SpeedLimitOption(string Label, int KBps);
 /// <summary>Opción de "Al abrir el juego" (ComboBox).</summary>
 public sealed record AfterLaunchOption(string Label, AfterLaunchBehavior Value);
 
+/// <summary>Opción de "Modo de pantalla" (ComboBox).</summary>
+public sealed record LaunchProfileOption(string Label, LaunchProfile Value);
+
 /// <summary>Qué ajuste cambió (para que el MainViewModel reaccione además de guardar).</summary>
 public enum SettingChange
 {
@@ -25,6 +29,8 @@ public enum SettingChange
     AutoDownload,
     IncludePrereleases,
     CheckLauncherUpdates,
+    PlaytestReminders,
+    DeveloperMode,
 }
 
 /// <summary>
@@ -46,6 +52,8 @@ public sealed class SettingsViewModel : ObservableObject
     private string _feedbackNickname = "";
     private int _pendingFeedbackCount;
     private bool _pendingFeedbackWaitsForTeam;
+    private int _pendingBugReportCount;
+    private bool _pendingBugReportsWaitForTeam;
 
     public SettingsViewModel(MainViewModel owner)
     {
@@ -69,6 +77,8 @@ public sealed class SettingsViewModel : ObservableObject
             new AfterLaunchOption("Minimizar", AfterLaunchBehavior.Minimize),
             new AfterLaunchOption("Cerrar launcher", AfterLaunchBehavior.Close),
         };
+
+        LaunchProfileOptions = LaunchProfiles.All.Select(p => new LaunchProfileOption(LaunchProfiles.GetDisplayName(p), p)).ToList();
 
         _argumentsDebounce = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _argumentsDebounce.Tick += (_, _) => CommitLaunchArguments();
@@ -165,6 +175,22 @@ public sealed class SettingsViewModel : ObservableObject
 
     // ───────────── Juego ─────────────
 
+    /// <summary>«Modo de pantalla»: perfiles de lanzamiento (LaunchProfiles), en el orden en que se muestran.</summary>
+    public IReadOnlyList<LaunchProfileOption> LaunchProfileOptions { get; }
+
+    /// <summary>Al abrir el juego se combina con los argumentos de lanzamiento (los del usuario mandan).</summary>
+    public LaunchProfileOption? SelectedLaunchProfile
+    {
+        get => LaunchProfileOptions.FirstOrDefault(o => o.Value == S.LaunchProfile) ?? LaunchProfileOptions.FirstOrDefault();
+        set
+        {
+            if (value == null || S.LaunchProfile == value.Value) return;
+            S.LaunchProfile = value.Value;
+            OnPropertyChanged();
+            _owner.OnSettingsChanged(SettingChange.General);
+        }
+    }
+
     /// <summary>Se guarda con un retardo de 500 ms o al perder el foco (<see cref="CommitLaunchArguments"/>).</summary>
     public string LaunchArguments
     {
@@ -188,6 +214,21 @@ public sealed class SettingsViewModel : ObservableObject
             S.AfterLaunch = value.Value;
             OnPropertyChanged();
             _owner.OnSettingsChanged(SettingChange.General);
+        }
+    }
+
+    // ───────────── Sesiones de prueba (tarjeta Juego) ─────────────
+
+    /// <summary>Notificación de Windows unos minutos antes de una sesión de prueba (si el launcher está abierto).</summary>
+    public bool PlaytestRemindersEnabled
+    {
+        get => S.PlaytestRemindersEnabled;
+        set
+        {
+            if (S.PlaytestRemindersEnabled == value) return;
+            S.PlaytestRemindersEnabled = value;
+            OnPropertyChanged();
+            _owner.OnSettingsChanged(SettingChange.PlaytestReminders);
         }
     }
 
@@ -239,6 +280,46 @@ public sealed class SettingsViewModel : ObservableObject
 
     public ICommand SendFeedbackCommand => _owner.SendFeedbackCommand;
     public ICommand RetryFeedbackSendCommand => _owner.RetryFeedbackSendCommand;
+
+    // ───────────── Reportes de problemas (tarjeta Juego) ─────────────
+
+    /// <summary>
+    /// "1 reporte pendiente de enviar" / "3 reportes pendientes de enviar"; sin webhook, "…: se enviarán cuando el equipo
+    /// active los envíos" (no es un problema de conexión).
+    /// </summary>
+    public string PendingBugReportsText => (_pendingBugReportCount == 1, _pendingBugReportsWaitForTeam) switch
+    {
+        (true, false) => "1 reporte de problema pendiente de enviar",
+        (false, false) => $"{_pendingBugReportCount} reportes de problemas pendientes de enviar",
+        (true, true) => "1 reporte de problema pendiente: se enviará cuando el equipo active los envíos",
+        (false, true) => $"{_pendingBugReportCount} reportes de problemas pendientes: se enviarán cuando el equipo active los envíos",
+    };
+
+    public bool HasPendingBugReports => _pendingBugReportCount > 0;
+
+    /// <summary>Los pendientes esperan a que el equipo publique un webhook: se muestran sin color de aviso.</summary>
+    public bool PendingBugReportsWaitForTeam => _pendingBugReportsWaitForTeam;
+
+    public ICommand ReportProblemCommand => _owner.ReportProblemCommand;
+    public ICommand RetryBugReportSendCommand => _owner.RetryBugReportSendCommand;
+
+    // ───────────── Herramientas de desarrollo ─────────────
+
+    /// <summary>Muestra «Abrir otra instancia» (para probar host y cliente en el mismo PC).</summary>
+    public bool DeveloperMode
+    {
+        get => S.DeveloperMode;
+        set
+        {
+            if (S.DeveloperMode == value) return;
+            S.DeveloperMode = value;
+            OnPropertyChanged();
+            _owner.OnSettingsChanged(SettingChange.DeveloperMode);
+        }
+    }
+
+    public ICommand LaunchExtraInstanceCommand => _owner.LaunchExtraInstanceCommand;
+    public ICommand ShowHostingCommand => _owner.ShowHostingCommand;
 
     // ───────────── Launcher ─────────────
 
@@ -330,6 +411,21 @@ public sealed class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(PendingFeedbackText));
         OnPropertyChanged(nameof(HasPendingFeedback));
         OnPropertyChanged(nameof(PendingFeedbackWaitsForTeam));
+    }
+
+    /// <summary>
+    /// Número de reportes de problemas en la bandeja de salida. <paramref name="waitsForTeam"/>: no hay webhook (ni en
+    /// launcher.json ni en la encuesta), así que esperan a que el equipo active los envíos.
+    /// </summary>
+    internal void SetPendingBugReports(int count, bool waitsForTeam = false)
+    {
+        count = Math.Max(0, count);
+        if (_pendingBugReportCount == count && _pendingBugReportsWaitForTeam == waitsForTeam) return;
+        _pendingBugReportCount = count;
+        _pendingBugReportsWaitForTeam = waitsForTeam;
+        OnPropertyChanged(nameof(PendingBugReportsText));
+        OnPropertyChanged(nameof(HasPendingBugReports));
+        OnPropertyChanged(nameof(PendingBugReportsWaitForTeam));
     }
 
     /// <summary>Actualiza la tarjeta "Instalación" (ruta y tamaño en disco, calculado en segundo plano).</summary>

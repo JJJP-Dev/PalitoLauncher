@@ -64,7 +64,7 @@ public enum CloseDecision
     MustWait,
 
     /// <summary>
-    /// La encuesta está abierta con respuestas sin enviar: preguntar «¿Salir sin enviarla?»
+    /// La encuesta (o «Reportar un problema») está abierta con algo sin enviar: preguntar «¿Salir sin enviarla?»
     /// (<see cref="MainViewModel.ConfirmCloseWithUnsentFeedbackAsync"/>) y después volver a decidir.
     /// </summary>
     ConfirmUnsentFeedback,
@@ -208,6 +208,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         // Opiniones: si algo falla al crearlos, el launcher sigue funcionando sin ellas.
         _surveyProvider = CreateSurveyProvider(_github);
         _feedback = CreateFeedbackService();
+        // launcher.json (anuncios, sesiones de prueba…): igual, opcional.
+        _manifestProvider = CreateManifestProvider(_github);
+        // «Reportar un problema» (bandeja de salida en disco): igual, opcional.
+        _bugReports = CreateBugReportService();
 
         _process.GameStarted += OnGameStarted;
         _process.GameExited += OnGameExited;
@@ -267,10 +271,30 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         NeverAskFeedbackCommand = new RelayCommand(NeverAskFeedback);
         RetryFeedbackSendCommand = new AsyncRelayCommand(RetryFeedbackSendAsync, () => !_flushRunning && _feedback != null);
 
+        // Reportes de problemas y herramientas (hostear, modo desarrollador).
+        ReportProblemCommand = new RelayCommand(() => RunFlow(ReportProblemAsync, "Reportar un problema"), () => CanOpenBugReport);
+        RetryBugReportSendCommand = new AsyncRelayCommand(RetryBugReportSendAsync, () => !_bugFlushRunning && _bugReports != null);
+        ShowHostingCommand = new RelayCommand(() => RunFlow(ShowHostingAsync, "Hostear partida"), () => !_hostingOpen);
+        LaunchExtraInstanceCommand = new RelayCommand(() => RunFlow(LaunchExtraInstanceAsync, "Abrir otra instancia del juego"),
+            () => _settings.DeveloperMode && !IsBusy);
+
         Settings = new SettingsViewModel(this);
+
+        // launcher.json: tarjeta de la sesión de prueba.
+        Playtest = new PlaytestCardViewModel(
+            () => RunFlow(AddPlaytestToCalendarAsync, "Añadir la sesión al calendario"),
+            JoinPlaytestDiscord,
+            RunPlaytestVersionAction,
+            CanRunPlaytestVersionAction);
 
         _periodicTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = LauncherConfig.PeriodicCheckInterval };
         _periodicTimer.Tick += (_, _) => RunFlow(PeriodicCheckAsync, "Comprobación periódica", showErrors: false);
+
+        // launcher.json se relee cada 15 min (raw: no gasta cupo) y el reloj recalcula anuncios y cuenta atrás cada 30 s.
+        _manifestTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = LauncherConfig.ManifestRefreshInterval };
+        _manifestTimer.Tick += (_, _) => RunFlow(RefreshManifestAsync, "launcher.json periódico", showErrors: false);
+        _manifestClockTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = ManifestClockInterval };
+        _manifestClockTimer.Tick += (_, _) => OnManifestClockTick();
 
         _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3.5) };
         _toastTimer.Tick += (_, _) =>
@@ -552,6 +576,7 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             Settings.RefreshInstallInfo(_installRoot, _installStatus);
             RunFlow(RefreshPendingFeedbackAsync, "Opiniones pendientes", showErrors: false);
+            RunFlow(RefreshPendingBugReportsAsync, "Reportes pendientes", showErrors: false);
         }
         else if (page == AppPage.Roadmap)
         {
@@ -914,8 +939,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             text = _crashNotice;
             kind = NoticeKind.Error;
-            actionText = "Crear informe";
-            action = CreateReportAsync;
+            // Reporte con los registros de esa partida (categoría «Cierre del juego»). Se abre aparte: el diálogo puede
+            // estar abierto un rato y no debe bloquear el botón principal. «Crear informe» sigue en el menú ⋯.
+            actionText = "Reportar el cierre";
+            action = () =>
+            {
+                RunFlow(ReportCrashAsync, "Reportar el cierre");
+                return Task.CompletedTask;
+            };
             // En vez de la invitación tras la partida: contar qué pasó con la encuesta.
             action2Text = "Contarnos qué pasó";
             action2 = TellWhatHappenedAsync;
@@ -989,7 +1020,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         IsOffline = _lastFetchResult?.IsStale == true || _fetchErrorMessage != null;
         OfflineChipText = rateLimited ? "Datos guardados" : "Sin conexión";
 
-        // Notas de la última versión (solo se regeneran si cambian).
+        // Notas de la última versión (solo se regeneran si cambian). Con una actualización que se salta 2 o más versiones,
+        // la tarjeta pasa a «Qué ha cambiado desde tu versión» con las notas de cada una (UpdateMultiVersionNotes).
         if (latest == null)
         {
             if (_notesReleaseId != null)
@@ -998,12 +1030,16 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                 _notesBody = null;
                 NotesDocument = null;
             }
+            IsMultiVersionNotes = false;
             NotesTitle = "";
         }
         else
         {
-            var date = UiFormat.Date(latest.Release.PublishedAt ?? latest.Asset.UpdatedAt);
-            NotesTitle = date.Length > 0 ? $"Novedades de {latest.VersionDisplay} — {date}" : $"Novedades de {latest.VersionDisplay}";
+            if (!UpdateMultiVersionNotes(status?.State == InstallState.Installed ? info : null, latest))
+            {
+                var date = UiFormat.Date(latest.Release.PublishedAt ?? latest.Asset.UpdatedAt);
+                NotesTitle = date.Length > 0 ? $"Novedades de {latest.VersionDisplay} — {date}" : $"Novedades de {latest.VersionDisplay}";
+            }
             if (_notesReleaseId != latest.Release.Id || !string.Equals(_notesBody, latest.Release.Body, StringComparison.Ordinal))
             {
                 _notesReleaseId = latest.Release.Id;
@@ -1043,7 +1079,10 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
             : "Aún no hay builds publicadas en GitHub.";
     }
 
-    /// <summary>Reconstruye la lista de la página Versiones (conserva las expandidas).</summary>
+    /// <summary>
+    /// Reconstruye la lista de la página Versiones (conserva las expandidas) y, como cambió la lista o la instalación, lo
+    /// que depende de ellas en launcher.json (badges «Con problemas», aviso de build con problemas, versión de la sesión).
+    /// </summary>
     private void RebuildReleaseItems()
     {
         var releases = _gameReleases ?? Array.Empty<GameRelease>();
@@ -1055,11 +1094,14 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         foreach (var release in releases)
         {
             var item = new ReleaseItemViewModel(release, ReferenceEquals(release, installed), ReferenceEquals(release, latest),
-                InstallSpecificReleaseAsync, () => !IsBusy && !_primaryActionRunning && _initialized);
+                InstallSpecificReleaseAsync, () => !IsBusy && !_primaryActionRunning && _initialized,
+                blockedReason: FindBlockSafe(release)?.Reason);
             if (expanded.Contains(release.Asset.Id)) item.IsExpanded = true;
             Releases.Add(item);
         }
         HasReleases = Releases.Count > 0;
+
+        RefreshManifestPresentation();
     }
 
     private static GameRelease? FindInstalledRelease(InstalledGameInfo? info, IReadOnlyList<GameRelease> releases)
@@ -1191,6 +1233,15 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
                     IsLauncherUpdateVisible = false;
                 }
                 break;
+            case SettingChange.PlaytestReminders:
+                // Al activarlo con una sesión a punto de empezar, se avisa ya.
+                if (_settings.PlaytestRemindersEnabled) CheckPlaytestReminder();
+                break;
+            case SettingChange.DeveloperMode:
+                // Muestra u oculta «Abrir otra instancia» (junto a JUGAR y en el menú ⋯).
+                OnPropertyChanged(nameof(IsDeveloperMode));
+                Log.Info(_settings.DeveloperMode ? "Modo desarrollador activado." : "Modo desarrollador desactivado.");
+                break;
         }
         UpdateState();
     }
@@ -1203,6 +1254,8 @@ public sealed partial class MainViewModel : ObservableObject, IDisposable
         {
             _periodicTimer.Stop();
             _toastTimer.Stop();
+            _manifestTimer.Stop();
+            _manifestClockTimer.Stop();
             _operationCts?.Cancel();
             _lifetimeCts.Cancel();
         }

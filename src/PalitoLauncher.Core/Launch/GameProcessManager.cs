@@ -162,6 +162,59 @@ public sealed class GameProcessManager : IDisposable
     }
 
     /// <summary>
+    /// Herramienta de desarrollo: arranca una instancia EXTRA del juego (para probar host + clientes en el mismo PC) sin
+    /// seguirla (no cambia <see cref="IsRunning"/> ni dispara eventos) y aunque ya haya otra abierta. Mismas reglas de
+    /// arranque que <see cref="Launch"/> (WorkingDirectory, UseShellExecute = false, LauncherException con mensaje claro si
+    /// falta el exe o Windows no deja abrirlo). Devuelve el PID. Nota: si el juego tiene activado «Force Single Instance» en
+    /// Unity, Windows abrirá la ventana existente en lugar de otra.
+    /// </summary>
+    public int LaunchAdditionalInstance(string gameDir, string executableName, string? arguments)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gameDir);
+        ArgumentException.ThrowIfNullOrWhiteSpace(executableName);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var exePath = Path.Combine(gameDir, executableName);
+        if (!File.Exists(exePath))
+        {
+            Log.Warn($"No se encuentra el ejecutable del juego (instancia extra): {exePath}");
+            throw new LauncherException($"No se encuentra {executableName}. Usa «Reparar».");
+        }
+
+        // Sin EnableRaisingEvents ni seguimiento: esta instancia vive por su cuenta y el objeto Process se libera enseguida
+        // (liberarlo no cierra el juego).
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo(exePath)
+            {
+                WorkingDirectory = gameDir,
+                UseShellExecute = false,
+                Arguments = arguments ?? "",
+            },
+        };
+
+        try
+        {
+            if (!process.Start())
+                throw new InvalidOperationException("Process.Start devolvió false.");
+        }
+        catch (Win32Exception w32)
+        {
+            Log.Error($"No se pudo iniciar otra instancia de {exePath} (Win32 {w32.NativeErrorCode}).", w32);
+            throw new LauncherException(GetStartErrorMessage(executableName, w32.NativeErrorCode), w32);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"No se pudo iniciar otra instancia de {exePath}.", ex);
+            throw new LauncherException($"No se pudo abrir otra ventana de {executableName}. Vuelve a intentarlo; si se repite, usa «Reparar».", ex);
+        }
+
+        var pid = SafePid(process);
+        Log.Info($"Instancia extra del juego iniciada (modo desarrollador): {exePath} (pid {pid}) args=\"{arguments}\"");
+        return pid;
+    }
+
+    /// <summary>
     /// Si hay un proceso del juego ejecutándose desde <paramref name="gameDir"/> (abierto fuera del launcher o antes de
     /// reiniciarlo), se engancha a él (eventos incluidos) y devuelve true. Nunca lanza.
     /// </summary>

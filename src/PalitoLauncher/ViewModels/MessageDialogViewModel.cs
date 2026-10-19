@@ -7,9 +7,14 @@ namespace PalitoLauncher.ViewModels;
 public sealed class MessageDialogViewModel : ObservableObject, IOverlayDialog
 {
     private readonly TaskCompletionSource<DialogResult> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly bool _escapeChoosesSecondary;
 
+    /// <param name="escapeChoosesSecondary">
+    /// Esc = botón secundario (lo normal: «Cancelar»). False cuando el secundario es una acción («Reportar el problema»):
+    /// entonces Esc cierra sin elegir nada (DialogResult.None).
+    /// </param>
     public MessageDialogViewModel(string title, string message, string primaryText, string? secondaryText, bool isDanger,
-        string? tertiaryText)
+        string? tertiaryText, bool escapeChoosesSecondary = true)
     {
         Title = title ?? "";
         Message = message ?? "";
@@ -18,6 +23,7 @@ public sealed class MessageDialogViewModel : ObservableObject, IOverlayDialog
         TertiaryText = string.IsNullOrWhiteSpace(tertiaryText) ? null : tertiaryText;
         // Sin botón secundario no hay opción "segura" a la que mover el foco.
         IsDanger = isDanger && SecondaryText != null;
+        _escapeChoosesSecondary = escapeChoosesSecondary;
 
         PrimaryCommand = new RelayCommand(() => Close(DialogResult.Primary));
         SecondaryCommand = new RelayCommand(() => Close(DialogResult.Secondary));
@@ -39,7 +45,7 @@ public sealed class MessageDialogViewModel : ObservableObject, IOverlayDialog
 
     public Task<DialogResult> Completion => _completion.Task;
 
-    public void Cancel() => Close(HasSecondary ? DialogResult.Secondary : DialogResult.None);
+    public void Cancel() => Close(HasSecondary && _escapeChoosesSecondary ? DialogResult.Secondary : DialogResult.None);
 
     public void Accept()
     {

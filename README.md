@@ -145,6 +145,8 @@ Problemas típicos:
 
 ## Para el desarrollador
 
+Documentación completa (arquitectura, guía del código, feedback, roadmap y tareas manuales): **[docs/README.md](docs/README.md)**.
+
 ### Resumen
 
 - El launcher lee las releases públicas de **JJJP-Dev/Coop2D** con la API de GitHub (sin token) y elige como build del
@@ -295,8 +297,8 @@ arranque normal gasta 2 peticiones: releases y roadmap (este, como mucho una vez
 - **Límite de consultas mientras pruebas**: cada arranque y cada «Buscar actualizaciones» gasta cupo. Espera a la hora de
   restablecimiento o cambia de red.
 - **Builds de depuración**: si junto al exe hay un `PalitoLauncher.dll` (compilación normal, no publicada), el launcher
-  lo detecta como desarrollo y no se copia a `%LOCALAPPDATA%\Programs` ni se auto-actualiza. `--portable` fuerza lo
-  mismo con el exe publicado.
+  lo detecta como desarrollo y no se copia a `%LOCALAPPDATA%\Programs` ni se auto-actualiza. Con el exe publicado,
+  `--portable` solo evita la copia a `%LOCALAPPDATA%\Programs`: el launcher se sigue pudiendo auto-actualizar en su carpeta.
 - **El antivirus marca el exe**: los exe autocontenidos y comprimidos sin firmar a veces dan falsos positivos. Se puede
   enviar a revisión (Microsoft: <https://www.microsoft.com/wdsi/filesubmission>).
 - **Logs**: `%LOCALAPPDATA%\PalitoLauncher\logs\launcher-AAAAMMDD.log`. El informe para el desarrollador incluye los de

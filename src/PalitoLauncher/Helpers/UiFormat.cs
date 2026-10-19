@@ -62,6 +62,30 @@ public static class UiFormat
     /// <summary>Hora local "HH:mm".</summary>
     public static string Time(DateTimeOffset value) => value.ToLocalTime().ToString("HH:mm", Inv);
 
+    // Nombres fijos en español (no dependen del idioma de Windows ni de cómo los abrevie cada versión de ICU).
+    private static readonly string[] DayNames = { "domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado" };
+    private static readonly string[] MonthAbbreviations = { "ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic" };
+
+    /// <summary>Día local en español: "sábado 24 oct".</summary>
+    public static string DayAndDate(DateTimeOffset value)
+    {
+        var local = value.ToLocalTime();
+        return $"{DayNames[(int)local.DayOfWeek]} {local.Day.ToString(Inv)} {MonthAbbreviations[local.Month - 1]}";
+    }
+
+    /// <summary>
+    /// Cuándo es una sesión, en hora local: "sábado 24 oct · 21:00 – 23:00"; si acaba otro día,
+    /// "sábado 24 oct · 23:00 – 01:00 (domingo)".
+    /// </summary>
+    public static string SessionWhen(DateTimeOffset startUtc, DateTimeOffset endUtc)
+    {
+        var start = startUtc.ToLocalTime();
+        var end = endUtc.ToLocalTime();
+        var range = $"{start.ToString("HH:mm", Inv)} – {end.ToString("HH:mm", Inv)}";
+        if (end.Date != start.Date) range += $" ({DayNames[(int)end.DayOfWeek]})";
+        return $"{DayAndDate(startUtc)} · {range}";
+    }
+
     private static string FallbackBytes(long bytes)
     {
         if (bytes < 1024) return $"{Math.Max(0, bytes)} B";

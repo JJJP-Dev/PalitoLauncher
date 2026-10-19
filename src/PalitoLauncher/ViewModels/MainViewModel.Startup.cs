@@ -54,6 +54,12 @@ public sealed partial class MainViewModel
         // También en segundo plano y sin diálogos: roadmap (milestones) y opiniones (encuesta + bandeja de salida).
         RunFlow(() => RefreshRoadmapAsync(bypassFreshness: false, automatic: true), "Roadmap", showErrors: false);
         RunFlow(InitializeFeedbackAsync, "Opiniones", showErrors: false);
+
+        // launcher.json (anuncios, builds con problemas, enlaces, sesiones de prueba), ya con las releases cargadas.
+        StartManifest();
+
+        // Reportes de problemas pendientes (cuando ya se sabe el webhook: tras la primera lectura de launcher.json).
+        RunFlow(InitializeBugReportsAsync, "Reportes pendientes", showErrors: false);
     }
 
     private async Task InitializeCoreAsync()
@@ -70,6 +76,7 @@ public sealed partial class MainViewModel
         }
         _settingsLoaded = true;
         Settings.Reload();
+        OnPropertyChanged(nameof(IsDeveloperMode));
 
         // 2. Disco: carpeta de instalación, recuperación, estado y juego abierto.
         try
@@ -465,6 +472,8 @@ public sealed partial class MainViewModel
 
         // Encuesta y opiniones pendientes (raw.githubusercontent.com y Discord: no gastan cupo de la API de GitHub).
         await PeriodicFeedbackAsync();
+        // Reportes de problemas pendientes (Discord).
+        await PeriodicBugReportsAsync();
     }
 
     /// <summary>Fondo remoto (raw.githubusercontent.com, sin gastar cupo de la API). Si falla, queda el degradado.</summary>

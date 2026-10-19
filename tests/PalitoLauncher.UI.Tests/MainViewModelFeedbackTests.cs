@@ -188,7 +188,7 @@ public sealed class MainViewModelFeedbackTests
     {
         MainViewModelAccess.CrashNotice(vm) = "Coop2D se cerró de forma inesperada (código 3).";
         MainViewModelAccess.UpdateState(vm);
-        Assert.Equal("Crear informe", vm.SecondaryNoticeActionText);
+        Assert.Equal("Reportar el cierre", vm.SecondaryNoticeActionText); // 1.0.5: antes «Crear informe» (sigue en el menú ⋯)
         Assert.Equal("Contarnos qué pasó", vm.SecondaryNoticeAction2Text);
         Assert.True(vm.HasSecondaryNoticeAction2);
 

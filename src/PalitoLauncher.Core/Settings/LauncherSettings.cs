@@ -56,6 +56,28 @@ public sealed class LauncherSettings
     /// <summary>Última vez (UTC) que se mostró la invitación a dar opinión tras una partida (para no preguntar demasiado).</summary>
     public DateTimeOffset? LastFeedbackPromptUtc { get; set; }
 
+    /// <summary>Ids de anuncios (launcher.json) que el usuario cerró. Máx. 200 (se quitan los más viejos).</summary>
+    public List<string> DismissedAnnouncementIds { get; set; } = new();
+
+    /// <summary>Ids de sesiones de prueba de las que ya se avisó. Máx. 200.</summary>
+    public List<string> RemindedPlaytestIds { get; set; } = new();
+
+    /// <summary>Avisar (notificación de Windows) unos minutos antes de una sesión de prueba si el launcher está abierto.</summary>
+    public bool PlaytestRemindersEnabled { get; set; } = true;
+
+    /// <summary>Perfil de lanzamiento del juego (ventana, pantalla completa…). Se combina con LaunchArguments.</summary>
+    public Launch.LaunchProfile LaunchProfile { get; set; } = Launch.LaunchProfile.Default;
+
+    /// <summary>Muestra las herramientas de desarrollo (abrir varias instancias del juego, etc.).</summary>
+    public bool DeveloperMode { get; set; }
+
     /// <summary>Copia profunda (todas las propiedades son inmutables o valores).</summary>
-    public LauncherSettings Clone() => (LauncherSettings)MemberwiseClone();
+    public LauncherSettings Clone()
+    {
+        var copy = (LauncherSettings)MemberwiseClone();
+        // Las listas se copian para que la copia no comparta estado con el original.
+        copy.DismissedAnnouncementIds = new List<string>(DismissedAnnouncementIds ?? new List<string>());
+        copy.RemindedPlaytestIds = new List<string>(RemindedPlaytestIds ?? new List<string>());
+        return copy;
+    }
 }

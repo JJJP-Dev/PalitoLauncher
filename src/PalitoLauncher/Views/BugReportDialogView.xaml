@@ -1,0 +1,215 @@
+<UserControl x:Class="PalitoLauncher.Views.BugReportDialogView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:PalitoLauncher.ViewModels"
+             Focusable="False">
+    <UserControl.Resources>
+        <!-- Contador «12 / 2000»: ámbar cerca del límite -->
+        <Style x:Key="CounterText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Margin" Value="0,4,2,0" />
+            <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+        </Style>
+        <Style x:Key="FieldTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14.5" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Resources>
+
+    <Border x:Name="DialogBorder" Width="620" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BorderBrush}"
+            BorderThickness="1" CornerRadius="12">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="32" ShadowDepth="6" Opacity="0.55" Color="Black" />
+        </Border.Effect>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Cabecera -->
+            <Border Grid.Row="0" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="28,24,28,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="40" Height="40" CornerRadius="10" Background="{StaticResource DangerSubtleBrush}" VerticalAlignment="Top"
+                            Margin="0,2,16,0">
+                        <TextBlock Text="&#xEBE8;" Style="{StaticResource GlyphText}" FontSize="19" Foreground="{StaticResource DangerBrush}"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Intro}" Style="{StaticResource BodyText}" Foreground="{StaticResource TextDimBrush}"
+                                   Margin="0,6,0,0" LineHeight="20" />
+                        <TextBlock Text="{Binding MetaText}" Style="{StaticResource SmallDimText}" Margin="0,8,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Formulario -->
+            <ScrollViewer x:Name="FormScroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                          Focusable="False" Padding="28,20,22,6">
+                <StackPanel x:Name="FormPanel" IsEnabled="{Binding IsInputEnabled}" Margin="0,0,6,0">
+                    <!-- Categoría -->
+                    <TextBlock Text="¿Qué tipo de problema es?" Style="{StaticResource FieldTitle}" />
+                    <ItemsControl ItemsSource="{Binding Categories}" Focusable="False" IsTabStop="False" Margin="0,10,0,16"
+                                  AutomationProperties.Name="Tipo de problema">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:BugCategoryOptionViewModel}">
+                                <RadioButton Style="{StaticResource PillRadio}" Content="{Binding Text}" GroupName="{Binding GroupName}"
+                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                             AutomationProperties.Name="{Binding AutomationName}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- ¿Qué ha pasado? (obligatorio) -->
+                    <TextBlock Style="{StaticResource FieldTitle}">
+                        <Run Text="¿Qué ha pasado?" />
+                        <Run Text="*" Foreground="{StaticResource AccentBrush}" />
+                    </TextBlock>
+                    <Grid Margin="0,10,0,0">
+                        <TextBox x:Name="DescriptionBox" Style="{StaticResource MultilineTextBox}"
+                                 Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                                 MaxLength="{Binding DescriptionMaxLength, Mode=OneWay}"
+                                 AutomationProperties.Name="¿Qué ha pasado? (obligatorio)"
+                                 AutomationProperties.HelpText="{Binding DescriptionHint, Mode=OneWay}" />
+                        <TextBlock Text="{Binding DescriptionPlaceholder}" Margin="11,8,11,0" FontSize="13" TextWrapping="Wrap"
+                                   IsHitTestVisible="False" Foreground="{StaticResource TextDisabledBrush}"
+                                   Visibility="{Binding ShowDescriptionPlaceholder, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+                    <DockPanel LastChildFill="False">
+                        <TextBlock DockPanel.Dock="Left" Text="{Binding DescriptionHint}" Style="{StaticResource SmallDimText}" Margin="2,4,0,0"
+                                   Visibility="{Binding ShowDescriptionHint, Converter={StaticResource BoolToVis}}" />
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding DescriptionCounterText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource CounterText}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDescriptionNearLimit}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </DockPanel>
+
+                    <!-- ¿Cómo podemos reproducirlo? (opcional) -->
+                    <TextBlock Text="¿Cómo podemos reproducirlo? (opcional)" Style="{StaticResource FieldTitle}" Margin="0,14,0,0" />
+                    <TextBlock Text="Los pasos que seguiste justo antes, si los recuerdas." Style="{StaticResource DimText}" Margin="0,3,0,0" />
+                    <Grid Margin="0,10,0,0">
+                        <TextBox Style="{StaticResource MultilineTextBox}" Text="{Binding Steps, UpdateSourceTrigger=PropertyChanged}"
+                                 MaxLength="{Binding StepsMaxLength, Mode=OneWay}"
+                                 AutomationProperties.Name="¿Cómo podemos reproducirlo? (opcional)" />
+                        <TextBlock Text="{Binding StepsPlaceholder}" Margin="11,8,11,0" FontSize="13" TextWrapping="Wrap"
+                                   IsHitTestVisible="False" Foreground="{StaticResource TextDisabledBrush}"
+                                   Visibility="{Binding ShowStepsPlaceholder, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+                    <TextBlock Text="{Binding StepsCounterText}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource CounterText}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsStepsNearLimit}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <!-- Nombre (compartido con las opiniones) -->
+                    <TextBlock Text="Tu nombre o apodo (opcional)" Style="{StaticResource FieldTitle}" Margin="0,10,0,0" />
+                    <TextBlock Text="Para poder preguntarte si necesitamos más detalles. Déjalo vacío si prefieres que sea anónimo."
+                               Style="{StaticResource DimText}" Margin="0,3,0,0" />
+                    <TextBox Text="{Binding Nickname, UpdateSourceTrigger=PropertyChanged}" MaxLength="{Binding NicknameMaxLength, Mode=OneWay}"
+                             Width="320" HorizontalAlignment="Left" Margin="0,10,0,18"
+                             AutomationProperties.Name="Tu nombre o apodo (opcional)" />
+
+                    <!-- Registros -->
+                    <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="14,12" Margin="0,0,0,18">
+                        <StackPanel>
+                            <CheckBox x:Name="AttachLogsBox" IsChecked="{Binding AttachLogs}" FontWeight="SemiBold"
+                                      Content="Adjuntar registros del juego y del launcher (recomendado)" />
+                            <StackPanel Orientation="Horizontal" Margin="24,6,0,0">
+                                <TextBlock Text="&#xE72E;" Style="{StaticResource GlyphText}" FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                                           VerticalAlignment="Top" Margin="0,2,8,0" />
+                                <TextBlock Text="{Binding PrivacyNote}" Style="{StaticResource DimText}" FontSize="12" MaxWidth="480" />
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding Attachments}" Focusable="False" IsTabStop="False" Margin="24,8,0,0"
+                                          Opacity="{Binding AttachmentsOpacity}"
+                                          Visibility="{Binding HasAttachments, Converter={StaticResource BoolToVis}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:BugReportAttachmentPreview}">
+                                        <Grid Margin="0,2,0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}" FontSize="12.5" FontFamily="{StaticResource MonoFont}"
+                                                       Foreground="{StaticResource TextBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Description}" Style="{StaticResource SmallDimText}"
+                                                       Margin="10,0,10,0" VerticalAlignment="Center" ToolTip="{Binding Description}" />
+                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" Style="{StaticResource SmallDimText}"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Pie -->
+            <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="28,14,28,20">
+                <StackPanel>
+                    <Border Margin="0,0,0,12" CornerRadius="8" Padding="12,9" BorderThickness="1" Background="#1AFF5C6C" BorderBrush="#55FF5C6C"
+                            Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}">
+                        <TextBlock x:Name="ErrorText" Text="{Binding ErrorMessage}" FontSize="13" TextWrapping="Wrap"
+                                   Foreground="{StaticResource DangerBrush}" AutomationProperties.LiveSetting="Assertive" />
+                    </Border>
+
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE72E;" Style="{StaticResource GlyphText}" FontSize="12" Foreground="{StaticResource TextDimBrush}"
+                                   VerticalAlignment="Top" Margin="0,2,8,0" />
+                        <TextBlock Text="{Binding FooterNote}" Style="{StaticResource DimText}" FontSize="12" MaxWidth="530" />
+                    </StackPanel>
+
+                    <!-- Botones -->
+                    <DockPanel Margin="0,14,0,0" LastChildFill="False"
+                               Visibility="{Binding IsFooterButtonsVisible, Converter={StaticResource BoolToVis}}">
+                        <Button x:Name="SendButton" DockPanel.Dock="Right" MinWidth="120" Margin="10,0,0,0" Style="{StaticResource AccentButton}"
+                                Content="{Binding SendButtonText}" Command="{Binding SendCommand}"
+                                AutomationProperties.Name="{Binding SendButtonText}" AutomationProperties.LiveSetting="Polite" />
+                        <Button x:Name="CancelButton" DockPanel.Dock="Right" MinWidth="100" Content="Cancelar" Command="{Binding CancelCommand}" />
+                    </DockPanel>
+
+                    <!-- Confirmación: descartar (Esc/Cancelar con texto) o salir del launcher con el reporte sin enviar -->
+                    <DockPanel Margin="0,14,0,0" LastChildFill="True"
+                               Visibility="{Binding IsConfirming, Converter={StaticResource BoolToVis}}">
+                        <Button x:Name="DiscardButton" DockPanel.Dock="Right" MinWidth="110" Margin="10,0,0,0" Style="{StaticResource DangerButton}"
+                                Content="{Binding ConfirmActionText}" Command="{Binding DiscardCommand}" />
+                        <Button x:Name="KeepEditingButton" DockPanel.Dock="Right" MinWidth="100" Margin="12,0,0,0" Content="{Binding KeepEditingText}"
+                                Command="{Binding KeepEditingCommand}" />
+                        <TextBlock x:Name="ConfirmTextBlock" Text="{Binding ConfirmText}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" Foreground="{StaticResource TextBrush}" AutomationProperties.LiveSetting="Assertive" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Border>
+</UserControl>

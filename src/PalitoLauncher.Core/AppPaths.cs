@@ -16,6 +16,9 @@ public static class AppPaths
     /// <summary>Bandeja de salida del feedback (respuestas pendientes de enviar a Discord).</summary>
     public static string FeedbackOutboxDir => Path.Combine(AppDataDir, "feedback", "outbox");
 
+    /// <summary>Bandeja de salida de los reportes de problemas (una carpeta por reporte, con sus adjuntos).</summary>
+    public static string BugReportOutboxDir => Path.Combine(AppDataDir, "reports", "outbox");
+
     /// <summary>Carpeta "biblioteca" por defecto: %LOCALAPPDATA%\PalitoGames.</summary>
     public static string DefaultLibraryDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PalitoGames");

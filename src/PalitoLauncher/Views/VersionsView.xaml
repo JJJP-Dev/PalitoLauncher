@@ -69,9 +69,18 @@
                                                     Visibility="{Binding IsPrerelease, Converter={StaticResource BoolToVis}}">
                                                 <TextBlock Text="De prueba" Style="{StaticResource BadgeText}" Foreground="{StaticResource InfoBrush}" />
                                             </Border>
+                                            <!-- launcher.json: build con un problema grave conocido -->
+                                            <Border Style="{StaticResource Badge}" Background="{StaticResource DangerSubtleBrush}"
+                                                    ToolTip="{Binding BlockedText}"
+                                                    Visibility="{Binding IsBlocked, Converter={StaticResource BoolToVis}}">
+                                                <TextBlock Text="Con problemas" Style="{StaticResource BadgeText}" Foreground="{StaticResource DangerBrush}" />
+                                            </Border>
                                         </WrapPanel>
                                         <TextBlock Text="{Binding DetailsText}" Style="{StaticResource DimText}" Margin="0,3,0,0"
                                                    TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding BlockedText}" Style="{StaticResource DimText}" Margin="0,3,0,0"
+                                                   Foreground="{StaticResource DangerBrush}"
+                                                   Visibility="{Binding IsBlocked, Converter={StaticResource BoolToVis}}" />
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">

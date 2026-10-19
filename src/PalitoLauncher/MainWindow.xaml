@@ -34,6 +34,12 @@
         <DataTemplate DataType="{x:Type vm:SurveyDialogViewModel}">
             <views:SurveyDialogView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:BugReportDialogViewModel}">
+            <views:BugReportDialogView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HostingDialogViewModel}">
+            <views:HostingDialogView />
+        </DataTemplate>
 
         <!-- Color del aviso secundario según su tipo -->
         <Style x:Key="NoticeText" TargetType="TextBlock">
@@ -164,27 +170,30 @@
                         </Rectangle>
                     </Grid>
 
-                    <!-- Banner de actualización del launcher -->
-                    <Border Grid.Row="0" Background="{StaticResource BannerBrush}" BorderBrush="{StaticResource AccentBrush}"
-                            BorderThickness="0,0,0,1" Padding="24,10"
-                            Visibility="{Binding IsLauncherUpdateVisible, Converter={StaticResource BoolToVis}}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="&#xE896;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
-                                       Margin="0,0,10,0" />
-                            <TextBlock Grid.Column="1" Text="{Binding LauncherUpdateText}" FontWeight="SemiBold" VerticalAlignment="Center"
-                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding LauncherUpdateText}" />
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0">
-                                <Button Style="{StaticResource AccentButton}" Content="Actualizar" Command="{Binding UpdateLauncherCommand}" />
-                                <Button Content="Ver cambios" Margin="8,0,0,0" Command="{Binding ViewLauncherChangesCommand}" />
-                                <Button Style="{StaticResource GhostButton}" Content="Omitir" Margin="8,0,0,0" Command="{Binding SkipLauncherUpdateCommand}" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                    <!-- Banner de actualización del launcher y, debajo, los anuncios de launcher.json -->
+                    <StackPanel Grid.Row="0">
+                        <Border Background="{StaticResource BannerBrush}" BorderBrush="{StaticResource AccentBrush}"
+                                BorderThickness="0,0,0,1" Padding="24,10"
+                                Visibility="{Binding IsLauncherUpdateVisible, Converter={StaticResource BoolToVis}}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="&#xE896;" Style="{StaticResource GlyphText}" FontSize="15" Foreground="{StaticResource AccentBrush}"
+                                           Margin="0,0,10,0" />
+                                <TextBlock Grid.Column="1" Text="{Binding LauncherUpdateText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" ToolTip="{Binding LauncherUpdateText}" />
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="12,0,0,0">
+                                    <Button Style="{StaticResource AccentButton}" Content="Actualizar" Command="{Binding UpdateLauncherCommand}" />
+                                    <Button Content="Ver cambios" Margin="8,0,0,0" Command="{Binding ViewLauncherChangesCommand}" />
+                                    <Button Style="{StaticResource GhostButton}" Content="Omitir" Margin="8,0,0,0" Command="{Binding SkipLauncherUpdateCommand}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <views:AnnouncementBar Visibility="{Binding HasAnnouncements, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
 
                     <!-- Páginas (se crean una sola vez) -->
                     <Grid Grid.Row="1">
@@ -327,52 +336,79 @@
                                 </WrapPanel>
                             </StackPanel>
 
-                            <!-- Menú ⋯ -->
-                            <Button x:Name="MoreButton" Grid.Column="1" Style="{StaticResource IconButton}" Width="48" Height="48" FontSize="18"
-                                    Margin="0,0,12,0" Content="&#xE712;" Click="MoreButton_Click"
-                                    ToolTip="Más opciones" AutomationProperties.Name="Más opciones">
-                                <Button.ContextMenu>
-                                    <ContextMenu Placement="Top">
-                                        <MenuItem Header="Abrir carpeta del juego" Command="{Binding OpenGameFolderCommand}">
-                                            <MenuItem.Icon>
-                                                <TextBlock Text="&#xE838;" Style="{StaticResource MenuGlyph}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="Abrir guardados y logs del juego" Command="{Binding OpenSavesFolderCommand}">
-                                            <MenuItem.Icon>
-                                                <TextBlock Text="&#xE74E;" Style="{StaticResource MenuGlyph}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="Buscar actualizaciones" Command="{Binding CheckForUpdatesCommand}">
-                                            <MenuItem.Icon>
-                                                <TextBlock Text="&#xE72C;" Style="{StaticResource MenuGlyph}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <Separator />
-                                        <MenuItem Header="Reparar (volver a instalar)" Command="{Binding RepairCommand}">
-                                            <MenuItem.Icon>
-                                                <TextBlock Text="&#xE90F;" Style="{StaticResource MenuGlyph}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="Desinstalar" Command="{Binding UninstallCommand}">
-                                            <MenuItem.Icon>
-                                                <TextBlock Text="&#xE74D;" Style="{StaticResource MenuGlyph}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <Separator />
-                                        <MenuItem Header="Enviar opinión" Command="{Binding SendFeedbackCommand}">
-                                            <MenuItem.Icon>
-                                                <TextBlock Text="&#xE939;" Style="{StaticResource MenuGlyph}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                        <MenuItem Header="Crear informe para el desarrollador" Command="{Binding CreateReportCommand}">
-                                            <MenuItem.Icon>
-                                                <TextBlock Text="&#xE8A5;" Style="{StaticResource MenuGlyph}" />
-                                            </MenuItem.Icon>
-                                        </MenuItem>
-                                    </ContextMenu>
-                                </Button.ContextMenu>
-                            </Button>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <!-- Modo desarrollador: abrir otra instancia del juego (probar host y cliente en el mismo PC) -->
+                                <Button x:Name="ExtraInstanceButton" Style="{StaticResource IconButton}" Width="48" Height="48" FontSize="17"
+                                        Margin="0,0,4,0" Content="&#xE8A7;" Command="{Binding LaunchExtraInstanceCommand}"
+                                        ToolTip="Abrir otra instancia del juego (modo desarrollador)"
+                                        AutomationProperties.Name="Abrir otra instancia del juego"
+                                        Visibility="{Binding IsDeveloperMode, Converter={StaticResource BoolToVis}}" />
+
+                                <!-- Menú ⋯ -->
+                                <Button x:Name="MoreButton" Style="{StaticResource IconButton}" Width="48" Height="48" FontSize="18"
+                                        Margin="0,0,12,0" Content="&#xE712;" Click="MoreButton_Click"
+                                        ToolTip="Más opciones" AutomationProperties.Name="Más opciones">
+                                    <Button.ContextMenu>
+                                        <ContextMenu Placement="Top">
+                                            <MenuItem Header="Abrir carpeta del juego" Command="{Binding OpenGameFolderCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE838;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Abrir guardados y logs del juego" Command="{Binding OpenSavesFolderCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE74E;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Buscar actualizaciones" Command="{Binding CheckForUpdatesCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE72C;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <Separator />
+                                            <MenuItem Header="Reparar (volver a instalar)" Command="{Binding RepairCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE90F;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Desinstalar" Command="{Binding UninstallCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE74D;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <Separator />
+                                            <MenuItem Header="Enviar opinión" Command="{Binding SendFeedbackCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE939;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Reportar un problema" Command="{Binding ReportProblemCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xEBE8;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Crear informe para el desarrollador" Command="{Binding CreateReportCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE8A5;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <Separator />
+                                            <MenuItem Header="Hostear partida: mi IP" Command="{Binding ShowHostingCommand}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE968;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                            <MenuItem Header="Abrir otra instancia (modo desarrollador)"
+                                                      Command="{Binding LaunchExtraInstanceCommand}"
+                                                      Visibility="{Binding IsDeveloperMode, Converter={StaticResource BoolToVis}}">
+                                                <MenuItem.Icon>
+                                                    <TextBlock Text="&#xE8A7;" Style="{StaticResource MenuGlyph}" />
+                                                </MenuItem.Icon>
+                                            </MenuItem>
+                                        </ContextMenu>
+                                    </Button.ContextMenu>
+                                </Button>
+                            </StackPanel>
 
                             <!-- Botón principal (nunca IsDefault) -->
                             <Button x:Name="PrimaryActionButton" Grid.Column="2" Style="{StaticResource PrimaryButton}"

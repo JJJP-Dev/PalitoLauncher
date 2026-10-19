@@ -1,3 +1,4 @@
+using PalitoLauncher.Core.Launch;
 using PalitoLauncher.Core.Settings;
 using PalitoLauncher.Tests.TestHelpers.C;
 
@@ -211,5 +212,157 @@ public sealed class SettingsStoreTests : IDisposable
     {
         Assert.Equal(_file, new SettingsStore(_file).FilePath);
         Assert.ThrowsAny<ArgumentException>(() => new SettingsStore(" "));
+    }
+
+    // ---------------------------------------------------------------- campos de 1.0.5 (anuncios, sesiones, perfiles, dev)
+
+    [Fact]
+    public void Load_NoFile_NewFieldsHaveDefaults()
+    {
+        var settings = new SettingsStore(_file).Load();
+
+        Assert.Empty(settings.DismissedAnnouncementIds);
+        Assert.Empty(settings.RemindedPlaytestIds);
+        Assert.True(settings.PlaytestRemindersEnabled);
+        Assert.Equal(LaunchProfile.Default, settings.LaunchProfile);
+        Assert.False(settings.DeveloperMode);
+    }
+
+    [Fact]
+    public void SaveAndLoad_RoundTripsNewFields()
+    {
+        var original = new LauncherSettings
+        {
+            DismissedAnnouncementIds = new List<string> { "bienvenida", "pre2-listo" },
+            RemindedPlaytestIds = new List<string> { "pt-2026-10-24" },
+            PlaytestRemindersEnabled = false,
+            LaunchProfile = LaunchProfile.Windowed1080,
+            DeveloperMode = true,
+        };
+
+        Assert.True(new SettingsStore(_file).Save(original));
+        var loaded = new SettingsStore(_file).Load();
+
+        Assert.Equal(new[] { "bienvenida", "pre2-listo" }, loaded.DismissedAnnouncementIds);
+        Assert.Equal(new[] { "pt-2026-10-24" }, loaded.RemindedPlaytestIds);
+        Assert.False(loaded.PlaytestRemindersEnabled);
+        Assert.Equal(LaunchProfile.Windowed1080, loaded.LaunchProfile);
+        Assert.True(loaded.DeveloperMode);
+        Assert.Contains("\"Windowed1080\"", File.ReadAllText(_file), StringComparison.Ordinal); // enum como texto
+    }
+
+    [Fact]
+    public void Load_OldFileWithoutNewFields_KeepsOldValuesAndDefaults()
+    {
+        // Un settings.json de 1.0.4 (sin los campos nuevos) se sigue leyendo igual.
+        File.WriteAllText(_file, """{ "SchemaVersion": 1, "AutoDownloadUpdates": true, "LaunchArguments": "-monitor 2" }""");
+
+        var settings = new SettingsStore(_file).Load();
+
+        Assert.True(settings.AutoDownloadUpdates);
+        Assert.Equal("-monitor 2", settings.LaunchArguments);
+        Assert.Empty(settings.DismissedAnnouncementIds);
+        Assert.True(settings.PlaytestRemindersEnabled);
+        Assert.Equal(LaunchProfile.Default, settings.LaunchProfile);
+    }
+
+    [Fact]
+    public void Load_SanitizesIdLists()
+    {
+        File.WriteAllText(_file, """
+            {
+              "DismissedAnnouncementIds": ["a", "", "  ", null, " b ", "a", 7, {"x": 1}, "c"],
+              "RemindedPlaytestIds": null,
+              "DeveloperMode": true
+            }
+            """);
+
+        var settings = new SettingsStore(_file).Load();
+
+        // Sin vacíos, sin no-textos, sin repetidos (se queda la última aparición) y con espacios recortados.
+        Assert.Equal(new[] { "b", "a", "c" }, settings.DismissedAnnouncementIds);
+        Assert.NotNull(settings.RemindedPlaytestIds);
+        Assert.Empty(settings.RemindedPlaytestIds);
+        Assert.True(settings.DeveloperMode); // lo demás se lee igual
+        Assert.Empty(CorruptCopies());
+    }
+
+    [Fact]
+    public void Load_IdListWithWrongType_UsesEmptyListAndKeepsTheRest()
+    {
+        File.WriteAllText(_file, """{ "RemindedPlaytestIds": "pt-1", "PlaytestRemindersEnabled": false }""");
+
+        var settings = new SettingsStore(_file).Load();
+
+        Assert.Empty(settings.RemindedPlaytestIds);
+        Assert.False(settings.PlaytestRemindersEnabled);
+    }
+
+    [Fact]
+    public void Load_TooManyIds_KeepsTheMostRecent200()
+    {
+        var ids = Enumerable.Range(1, 250).Select(i => $"\"id-{i}\"");
+        File.WriteAllText(_file, $$"""{ "DismissedAnnouncementIds": [{{string.Join(",", ids)}}] }""");
+
+        var loaded = new SettingsStore(_file).Load().DismissedAnnouncementIds;
+
+        Assert.Equal(200, loaded.Count);
+        Assert.Equal("id-51", loaded[0]);
+        Assert.Equal("id-250", loaded[^1]);
+    }
+
+    [Fact]
+    public void Save_SanitizesIdListsWithoutTouchingTheCallerInstance()
+    {
+        var dismissed = Enumerable.Range(1, 230).Select(i => $"id-{i}").ToList();
+        dismissed.Add("id-5");      // repetido: pasa a ser de los más recientes
+        dismissed.Add("   ");
+        var settings = new LauncherSettings
+        {
+            DismissedAnnouncementIds = dismissed,
+            RemindedPlaytestIds = null!,
+        };
+
+        Assert.True(new SettingsStore(_file).Save(settings));
+
+        Assert.Equal(232, settings.DismissedAnnouncementIds.Count); // el objeto del llamador no cambia
+        Assert.Null(settings.RemindedPlaytestIds);
+
+        var loaded = new SettingsStore(_file).Load();
+        Assert.Equal(200, loaded.DismissedAnnouncementIds.Count);
+        Assert.Equal("id-32", loaded.DismissedAnnouncementIds[0]);
+        Assert.Equal("id-5", loaded.DismissedAnnouncementIds[^1]);
+        Assert.Single(loaded.DismissedAnnouncementIds, id => id == "id-5");
+        Assert.Empty(loaded.RemindedPlaytestIds);
+    }
+
+    [Fact]
+    public void SanitizeIdList_DropsOverlongIdsAndReturnsANewList()
+    {
+        var source = new List<string> { "ok", new string('x', SettingsStore.MaxRememberedIdLength + 1), "ok2" };
+
+        var result = SettingsStore.SanitizeIdList(source);
+
+        Assert.Equal(new[] { "ok", "ok2" }, result);
+        Assert.NotSame(source, result);
+        Assert.Empty(SettingsStore.SanitizeIdList(null));
+    }
+
+    [Theory]
+    [InlineData("\"Borderless\"", LaunchProfile.Borderless)]
+    [InlineData("\"fullscreen\"", LaunchProfile.Fullscreen)]
+    [InlineData("1", LaunchProfile.Windowed720)]
+    [InlineData("\"Ventana\"", LaunchProfile.Default)]
+    [InlineData("42", LaunchProfile.Default)]
+    [InlineData("null", LaunchProfile.Default)]
+    [InlineData("true", LaunchProfile.Default)]
+    public void Load_LaunchProfile_InvalidValuesFallBackToDefault(string rawValue, LaunchProfile expected)
+    {
+        File.WriteAllText(_file, $$"""{ "LaunchProfile": {{rawValue}}, "DeveloperMode": true }""");
+
+        var settings = new SettingsStore(_file).Load();
+
+        Assert.Equal(expected, settings.LaunchProfile);
+        Assert.True(settings.DeveloperMode);
     }
 }

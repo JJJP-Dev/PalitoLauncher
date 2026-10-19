@@ -47,6 +47,7 @@ public partial class MainWindow : Window
         _vm.RestoreRequested += OnRestoreRequested;
         _vm.AttentionRequested += OnAttentionRequested;
         _vm.CloseRequested += OnCloseRequested;
+        _vm.PlaytestReminderRequested += OnPlaytestReminderRequested;
 
         UpdateWindowStateVisuals();
         UpdateTaskbar();
@@ -112,9 +113,48 @@ public partial class MainWindow : Window
     {
         if (sender is not Button button || button.ContextMenu is not ContextMenu menu) return;
         menu.DataContext = DataContext;
+        RefreshCommunityMenuItems(menu);
         menu.PlacementTarget = button;
         menu.Placement = PlacementMode.Top;
         menu.IsOpen = true;
+    }
+
+    private const string CommunityMenuTag = "community-link";
+
+    /// <summary>
+    /// Enlaces de comunidad de launcher.json al final del menú ⋯ (cambian al releer el archivo: se rehacen al abrirlo).
+    /// Propiedades puestas a mano, sin bindings, para que no dependan del DataContext del menú.
+    /// </summary>
+    internal void RefreshCommunityMenuItems(ContextMenu menu)
+    {
+        try
+        {
+            foreach (var old in menu.Items.OfType<FrameworkElement>().Where(i => Equals(i.Tag, CommunityMenuTag)).ToList())
+                menu.Items.Remove(old);
+            if (_vm.CommunityLinks.Count == 0) return;
+
+            menu.Items.Add(new Separator { Tag = CommunityMenuTag });
+            var glyphStyle = (Style)FindResource("MenuGlyph");
+            foreach (var link in _vm.CommunityLinks)
+            {
+                menu.Items.Add(new MenuItem
+                {
+                    Tag = CommunityMenuTag,
+                    Header = link.Label,
+                    Command = link.OpenCommand,
+                    ToolTip = link.ToolTip,
+                    Icon = new TextBlock { Text = link.Glyph, Style = glyphStyle },
+                    // El estilo de Windows las enlaza al ItemsControl padre, que un MenuItem creado en código aún no
+                    // tiene al aplicarse (error de binding): con valor propio no se usa ese enlace.
+                    HorizontalContentAlignment = HorizontalAlignment.Left,
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("No se pudieron añadir los enlaces de comunidad al menú.", ex);
+        }
     }
 
     // ───────────── Eventos del ViewModel ─────────────
@@ -149,9 +189,16 @@ public partial class MainWindow : Window
         if (!IsActive) NativeMethods.FlashTaskbar(new WindowInteropHelper(this).Handle);
     }
 
+    /// <summary>Sesión de prueba a punto de empezar: notificación de Windows (al pulsarla, trae el launcher) y parpadeo.</summary>
+    private void OnPlaytestReminderRequested(object? sender, PlaytestReminder reminder)
+    {
+        WindowsNotification.Show(reminder.Title, reminder.Message, BringToFront);
+        if (!IsActive) NativeMethods.FlashTaskbar(new WindowInteropHelper(this).Handle);
+    }
+
     /// <summary>
     /// El ViewModel pide cerrar (al terminar la operación tras pedir cerrar, o tras abrir el juego): una encuesta con
-    /// respuestas sin enviar pregunta antes «¿Salir sin enviarla?».
+    /// respuestas sin enviar (o un reporte de problema a medias) pregunta antes «¿Salir sin enviarla/enviarlo?».
     /// </summary>
     private void OnCloseRequested(object? sender, EventArgs e)
     {
@@ -259,9 +306,9 @@ public partial class MainWindow : Window
         {
             if (decision == CloseDecision.ConfirmUnsentFeedback)
             {
-                // La propia encuesta pregunta «¿Salir sin enviarla?»; con «Volver» la ventana sigue abierta.
+                // La propia encuesta (o el reporte) pregunta «¿Salir sin enviarla?»; con «Volver» la ventana sigue abierta.
                 if (!await _vm.ConfirmCloseWithUnsentFeedbackAsync()) return;
-                decision = _vm.GetCloseDecision(); // la encuesta ya se cerró: queda ver si hay una operación
+                decision = _vm.GetCloseDecision(); // el diálogo ya se cerró: queda ver si hay una operación
                 if (decision == CloseDecision.ConfirmUnsentFeedback) return;
                 if (decision == CloseDecision.Allow)
                 {
@@ -301,6 +348,8 @@ public partial class MainWindow : Window
         _vm.RestoreRequested -= OnRestoreRequested;
         _vm.AttentionRequested -= OnAttentionRequested;
         _vm.CloseRequested -= OnCloseRequested;
+        _vm.PlaytestReminderRequested -= OnPlaytestReminderRequested;
+        WindowsNotification.ReleaseAll(); // que no quede el icono de un aviso en la bandeja
         base.OnClosed(e);
     }
 }

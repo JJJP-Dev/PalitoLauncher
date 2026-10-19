@@ -54,6 +54,13 @@
     <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#566070" />
     <SolidColorBrush x:Key="BannerBrush" Color="#2BFFB627" />
 
+    <!-- Anuncios de launcher.json: fondo translúcido del color de su nivel (como el banner del launcher) -->
+    <SolidColorBrush x:Key="InfoBannerBrush" Color="#245AA9FF" />
+    <SolidColorBrush x:Key="WarningBannerBrush" Color="#26FFB020" />
+    <SolidColorBrush x:Key="DangerBannerBrush" Color="#2EFF5C6C" />
+    <!-- Fondo de los badges rojos («Con problemas») -->
+    <SolidColorBrush x:Key="DangerSubtleBrush" Color="#26FF5C6C" />
+
     <!-- Fuentes -->
     <FontFamily x:Key="AppFont">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>

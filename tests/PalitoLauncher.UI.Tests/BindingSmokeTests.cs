@@ -56,6 +56,18 @@ public sealed class BindingSmokeTests
         MainViewModelAccess.UpdateState(vm);
         vm.Settings.SetPendingFeedback(2);
 
+        // 1.0.5: launcher.json (anuncios de los tres niveles, la 0.0.1 instalada y la 0.0.2 con problemas, enlaces y una
+        // sesión de prueba que pide actualizar) y «Qué ha cambiado desde tu versión» (0.0.1 → 0.0.3).
+        vm.UtcNow = () => TestManifest.Now;
+        MainViewModelAccess.SetInstalled(vm, MainViewModelAccess.Installed("0.0.1", "0.0.1"));
+        vm.ApplyManifest(TestManifest.Full("v0.0.1", "v0.0.2"));
+        Assert.True(vm.IsMultiVersionNotes);
+        Assert.True(vm.Playtest.HasVersionAction);
+
+        // 1.0.5 (UI-2): modo desarrollador (botón junto a JUGAR, entrada del menú y tarjeta de Ajustes) y reportes pendientes.
+        vm.Settings.DeveloperMode = true;
+        vm.Settings.SetPendingBugReports(2);
+
         var window = new MainWindow(vm);
         var root = (FrameworkElement)window.Content;
         try
@@ -67,13 +79,30 @@ public sealed class BindingSmokeTests
             AssertShowsText(root, vm.RoadmapCurrent[0].Title);
             AssertShowsText(root, vm.FeedbackPromptTitle);          // invitación tras la partida
             Assert.Contains(Descendants(root), d => d is StarRating);
+            AssertShowsText(root, "Reportar el cierre");            // primera acción del aviso de cierre
             AssertShowsText(root, "Contarnos qué pasó");            // segunda acción del aviso
+            Assert.Contains(Descendants(root), d => d is Button { Name: "ExtraInstanceButton" });
+
+            Assert.Contains(Descendants(root), d => d is AnnouncementBar);
+            AssertShowsText(root, vm.Announcements[0].Title);       // «Tu versión (0.0.1) tiene un problema: …»
+            AssertShowsText(root, "Guardad la partida antes de salir");
+            AssertShowsText(root, "Abrir Discord");                 // botón de enlace del anuncio
+            Assert.Contains(Descendants(root), d => d is PlaytestCard);
+            AssertShowsText(root, vm.Playtest.Title);
+            AssertShowsText(root, vm.Playtest.CountdownText);
+            AssertShowsText(root, vm.Playtest.VersionText);
+            AssertShowsText(root, "Unirme al Discord");
+            AssertShowsText(root, vm.NotesTitle);                   // «Qué ha cambiado desde tu versión (0.0.1 → 0.0.3)»
+            AssertShowsText(root, vm.ReleaseNotesSections[1].Title);
+            AssertShowsText(root, "itch.io");                       // enlace de comunidad
 
             vm.NavigateCommand.Execute("Versions");
             await LayoutAsync(window);
             Assert.True(vm.IsVersionsPage);
             AssertShowsText(root, vm.Releases[0].VersionText); // la plantilla de la lista se generó de verdad
             Assert.Contains(Descendants(root), d => d is FlowDocumentScrollViewer { Document: not null });
+            AssertShowsText(root, "Con problemas");
+            AssertShowsText(root, vm.Releases.First(r => r.IsBlocked).BlockedText!);
 
             vm.NavigateCommand.Execute("Roadmap");
             await LayoutAsync(window);
@@ -89,16 +118,30 @@ public sealed class BindingSmokeTests
             Assert.True(vm.IsSettingsPage);
             AssertShowsText(root, vm.Settings.LauncherVersionText);
             AssertShowsText(root, vm.Settings.PendingFeedbackText);
+            AssertShowsText(root, "Avisarme antes de las sesiones de prueba");
+            AssertShowsText(root, "Modo de pantalla");
+            AssertShowsText(root, vm.Settings.PendingBugReportsText);
+            AssertShowsText(root, "Reportar un problema");
+            AssertShowsText(root, "Herramientas de desarrollo");
+            AssertShowsText(root, "Abrir otra instancia del juego");
 
             vm.NavigateCommand.Execute("Home");
             await LayoutAsync(window);
 
-            // Menú ⋯ (la ventana le pasa el DataContext al abrirlo).
+            // Menú ⋯ (la ventana le pasa el DataContext al abrirlo y añade los enlaces de comunidad al final).
             var more = (Button)window.FindName("MoreButton");
             var menu = more.ContextMenu!;
             menu.DataContext = vm;
-            await LayoutAsync(menu, 320, 400);
+            window.RefreshCommunityMenuItems(menu);
+            window.RefreshCommunityMenuItems(menu); // al volver a abrirlo no se duplican
+            await LayoutAsync(menu, 320, 600);
             Assert.NotEmpty(Descendants(menu).OfType<MenuItem>());
+            Assert.Single(menu.Items.OfType<MenuItem>(), i => Equals(i.Header, "Discord"));
+            Assert.Equal(vm.CommunityLinks.Count, menu.Items.OfType<MenuItem>().Count(i => Equals(i.Tag, "community-link")));
+            Assert.Single(menu.Items.OfType<MenuItem>(), i => Equals(i.Header, "Reportar un problema"));
+            Assert.Single(menu.Items.OfType<MenuItem>(), i => Equals(i.Header, "Hostear partida: mi IP"));
+            Assert.Single(menu.Items.OfType<MenuItem>(), i => Equals(i.Header, "Abrir otra instancia (modo desarrollador)")
+                                                              && i.Visibility == Visibility.Visible);
 
             // Diálogo de mensaje con los tres botones.
             var message = vm.Dialogs.ShowAsync("Título", "Mensaje largo de prueba", "Aceptar", "Cancelar", isDanger: true, tertiaryText: "Otra");
@@ -149,6 +192,43 @@ public sealed class BindingSmokeTests
             Assert.Null(await surveyShown);
             await LayoutAsync(window);
 
+            // 1.0.5 (UI-2): «Reportar un problema» (error de envío y confirmación de descartar)...
+            var report = BugReportDialog(_ => throw new LauncherException("Error de envío de prueba."));
+            var reportShown = vm.Dialogs.ShowDialogAsync(report, report.Completion);
+            await LayoutAsync(window);
+            Assert.Contains(Descendants(root), d => d is BugReportDialogView);
+            AssertShowsText(root, report.Title);
+            AssertShowsText(root, report.MetaText);
+            AssertShowsText(root, "Cierre del juego");               // categoría (pill)
+            AssertShowsText(root, "Player.log");                     // lista de adjuntos
+            AssertShowsText(root, report.PrivacyNote);
+            report.Description = "Se cerró al abrir la puerta del jefe";
+            await ((AsyncRelayCommand)report.SendCommand).ExecuteAsync(null);
+            await LayoutAsync(window);
+            AssertShowsText(root, "Error de envío de prueba.");
+            report.Cancel();
+            await LayoutAsync(window);
+            AssertShowsText(root, "¿Descartar el reporte?");
+            report.DiscardCommand.Execute(null);
+            Assert.Null(await reportShown);
+            await LayoutAsync(window);
+
+            // ...y «Hostear partida» (IP pública ya consultada y una IP copiada).
+            var hosting = HostingDialog(withAddresses: true);
+            var hostingShown = vm.Dialogs.ShowDialogAsync(hosting, hosting.Completion);
+            await ((AsyncRelayCommand)hosting.ShowPublicIpCommand).ExecuteAsync(null);
+            await ((AsyncRelayCommand)hosting.LanAddress!.CopyCommand).ExecuteAsync(null);
+            await LayoutAsync(window);
+            Assert.Contains(Descendants(root), d => d is HostingDialogView);
+            AssertShowsText(root, "192.168.1.20");
+            AssertShowsText(root, "26.10.0.5");
+            AssertShowsText(root, "203.0.113.7");
+            AssertShowsText(root, "Puerto del juego: 7770");
+            AssertShowsText(root, "Copiado: 192.168.1.20");
+            hosting.Cancel();
+            Assert.True(await hostingShown);
+            await LayoutAsync(window);
+
             Assert.Equal(IntPtr.Zero, new WindowInteropHelper(window).Handle); // nunca se creó la ventana de Windows
         }
         finally
@@ -165,6 +245,10 @@ public sealed class BindingSmokeTests
     {
         "Home", "Versions", "Settings", "InstallDialog", "InstallDialogBlocked", "MessageDialog",
         "Roadmap", "RoadmapLoading", "SurveyDialog",
+        // 1.0.5 (launcher.json)
+        "HomeWithManifest", "VersionsBlocked", "AnnouncementBar", "PlaytestCard", "PlaytestCardOngoing",
+        // 1.0.5 (reportes y herramientas)
+        "BugReportDialog", "HostingDialog", "HostingDialogEmpty", "SettingsDevMode",
     };
 
     [Theory]
@@ -184,17 +268,56 @@ public sealed class BindingSmokeTests
         }
         vm.Settings.SetPendingFeedback(1, waitsForTeam: true); // la variante neutra (sin webhook); la de aviso va en el otro test
 
+        // launcher.json: con la 0.0.1 instalada (y con problemas, igual que la 0.0.2) se ve todo lo nuevo.
+        vm.UtcNow = () => TestManifest.Now;
+        if (view is "HomeWithManifest" or "VersionsBlocked" or "AnnouncementBar" or "PlaytestCard")
+        {
+            MainViewModelAccess.SetInstalled(vm, MainViewModelAccess.Installed("0.0.1", "0.0.1"));
+            vm.ApplyManifest(TestManifest.Full("v0.0.1", "v0.0.2"));
+        }
+        else if (view == "PlaytestCardOngoing")
+        {
+            // En curso, pidiendo una versión que no está en la lista (ayuda visible, sin botón) y con el borde de acento.
+            vm.ApplyManifest(TestManifest.Make(m => m.Playtests.Add(TestManifest.Session(TimeSpan.FromMinutes(-30), requiredVersion: "v0.0.9"))));
+            Assert.True(vm.Playtest.IsOngoing && vm.Playtest.HasVersionHint);
+        }
+
         FrameworkElement element;
         switch (view)
         {
             case "Home":
+            case "HomeWithManifest":
                 element = new HomeView { DataContext = vm };
                 break;
             case "Versions":
+            case "VersionsBlocked":
                 element = new VersionsView { DataContext = vm };
+                break;
+            case "AnnouncementBar":
+                Assert.Equal(4, vm.Announcements.Count); // build con problemas + crítico + aviso + info
+                element = new AnnouncementBar { DataContext = vm };
+                break;
+            case "PlaytestCard":
+            case "PlaytestCardOngoing":
+                Assert.True(vm.Playtest.IsVisible);
+                element = new PlaytestCard { DataContext = vm.Playtest };
                 break;
             case "Settings":
                 element = new SettingsView { DataContext = vm.Settings };
+                break;
+            case "SettingsDevMode":
+                // Modo desarrollador activo (botón «Abrir otra instancia») y reportes pendientes en la variante de aviso.
+                vm.Settings.DeveloperMode = true;
+                vm.Settings.SetPendingBugReports(2);
+                element = new SettingsView { DataContext = vm.Settings };
+                break;
+            case "BugReportDialog":
+                element = new BugReportDialogView { DataContext = BugReportDialog(_ => Task.FromResult(FeedbackSendOutcome.Sent)) };
+                break;
+            case "HostingDialog":
+            case "HostingDialogEmpty":
+                // Vacío: sin IP en tu red (los bindings a LanAddress quedan sin objeto) y con el aviso de «sin red».
+                element = new HostingDialogView { DataContext = HostingDialog(withAddresses: view == "HostingDialog") };
                 break;
             case "Roadmap":
             case "RoadmapLoading":
@@ -234,6 +357,29 @@ public sealed class BindingSmokeTests
         await WpfHost.FlushAsync();
         Assert.True(errors.Messages.Count == 0, string.Join(Environment.NewLine, errors.Messages)); // el mensaje completo, no truncado
     });
+
+    /// <summary>Reporte de un cierre del juego con la lista de adjuntos (ninguno existe: «no encontrado» salvo el resumen).</summary>
+    private static BugReportDialogViewModel BugReportDialog(Func<BugReport, Task<FeedbackSendOutcome>> submit) => new(
+        new BugReportContext
+        {
+            Category = BugCategory.Crash,
+            ExitCode = 3,
+            Intro = "Coop2D se cerró de forma inesperada (código 3).",
+            Nickname = "Palito",
+            LauncherVersion = "1.0.5",
+            GameVersionDisplay = "0.0.3 · Prototipo 2",
+            Attachments = MainViewModel.BuildAttachmentPreviews(new MainViewModel.BugLogPaths(null, null, null)),
+        },
+        (report, _) => submit(report));
+
+    private static HostingDialogViewModel HostingDialog(bool withAddresses) => new(
+        withAddresses
+            ? new[] { new LocalAddress("192.168.1.20", "Wi-Fi", true), new LocalAddress("26.10.0.5", "Radmin VPN", false) }
+            : Array.Empty<LocalAddress>(),
+        withAddresses ? 7770 : null,
+        withAddresses ? "Abre el puerto UDP 7770 en tu router o usa Radmin VPN." : null,
+        _ => Task.FromResult<string?>("203.0.113.7"),
+        _ => Task.FromResult(true));
 
     private static IReadOnlyList<GameRelease> SampleReleases() => new[]
     {

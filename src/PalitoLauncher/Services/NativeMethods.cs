@@ -42,6 +42,33 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool QueryFullProcessImageName(IntPtr hProcess, uint dwFlags, StringBuilder lpExeName, ref uint lpdwSize);
 
+    // FOLDERID_Downloads (la carpeta Descargas real, aunque el usuario la haya movido a otra unidad).
+    private static readonly Guid FolderIdDownloads = new("374DE290-123F-4565-9164-39C4925E467B");
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
+    private static extern int SHGetKnownFolderPath([MarshalAs(UnmanagedType.LPStruct)] Guid rfid, uint dwFlags, IntPtr hToken,
+        out IntPtr ppszPath);
+
+    /// <summary>Carpeta Descargas del usuario (null si no se puede saber). Nunca lanza.</summary>
+    public static string? TryGetDownloadsFolder()
+    {
+        var pointer = IntPtr.Zero;
+        try
+        {
+            int hr = SHGetKnownFolderPath(FolderIdDownloads, 0, IntPtr.Zero, out pointer);
+            return hr == 0 && pointer != IntPtr.Zero ? Marshal.PtrToStringUni(pointer) : null;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn("No se pudo leer la carpeta Descargas.", ex);
+            return null;
+        }
+        finally
+        {
+            if (pointer != IntPtr.Zero) Marshal.FreeCoTaskMem(pointer);
+        }
+    }
+
     /// <summary>Hace parpadear el botón de la barra de tareas hasta que la ventana pase a primer plano. Nunca lanza.</summary>
     public static void FlashTaskbar(IntPtr hwnd)
     {

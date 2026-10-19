@@ -12,8 +12,9 @@ public sealed class ReleaseItemViewModel : ObservableObject
     private bool _isExpanded;
     private FlowDocument? _notesDocument;
 
+    /// <param name="blockedReason">Si launcher.json la marca como build con problemas, el motivo (badge «Con problemas»).</param>
     public ReleaseItemViewModel(GameRelease release, bool isInstalled, bool isLatest,
-        Func<GameRelease, Task> install, Func<bool> canInstall)
+        Func<GameRelease, Task> install, Func<bool> canInstall, string? blockedReason = null)
     {
         ArgumentNullException.ThrowIfNull(release);
         ArgumentNullException.ThrowIfNull(install);
@@ -22,6 +23,7 @@ public sealed class ReleaseItemViewModel : ObservableObject
         Release = release;
         IsInstalled = isInstalled;
         IsLatest = isLatest;
+        BlockedReason = blockedReason == null ? null : string.IsNullOrWhiteSpace(blockedReason) ? "Tiene un fallo grave conocido." : blockedReason.Trim();
 
         var info = release.Release;
         VersionText = string.IsNullOrWhiteSpace(release.VersionDisplay) ? info.TagName : release.VersionDisplay;
@@ -56,6 +58,15 @@ public sealed class ReleaseItemViewModel : ObservableObject
     public bool IsPrerelease => Release.Release.IsPrerelease;
 
     public bool CanShowInstall => !IsInstalled;
+
+    /// <summary>Badge rojo «Con problemas»: launcher.json avisa de un fallo grave en esta build.</summary>
+    public bool IsBlocked => BlockedReason != null;
+
+    /// <summary>Motivo del problema (para el jugador), o null.</summary>
+    public string? BlockedReason { get; }
+
+    /// <summary>"Problema conocido: se desconecta al entrar en la sala del jefe".</summary>
+    public string? BlockedText => BlockedReason != null ? $"Problema conocido: {BlockedReason}" : null;
 
     /// <summary>Al expandir se generan las notas (perezoso).</summary>
     public bool IsExpanded

@@ -17,6 +17,12 @@ public sealed class SettingsStore
     /// <summary>Copias de archivos corruptos que se conservan.</summary>
     internal const int MaxCorruptCopies = 3;
 
+    /// <summary>Máximo de ids recordados en cada lista (anuncios cerrados, sesiones avisadas). Se conservan los más recientes.</summary>
+    internal const int MaxRememberedIds = 200;
+
+    /// <summary>Un id más largo que esto no puede venir de launcher.json (máx. 64) y se descarta.</summary>
+    internal const int MaxRememberedIdLength = 128;
+
     private const int ReadAttempts = 3;
     private const int ReadRetryDelayMs = 100;
 
@@ -60,7 +66,8 @@ public sealed class SettingsStore
     /// Si settings.json no existe, está vacío (corte de luz) o corrupto → intenta settings.json.bak; si tampoco → valores
     /// por defecto. Un archivo corrupto se renombra a "settings.corrupt-yyyyMMddHHmmss.json" (se conservan solo los 3 más
     /// recientes) y se registra un Warn. Sanea valores: MaxDownloadSpeedKBps &lt; 0 → 0; LaunchArguments null → "";
-    /// enum inválido → por defecto.
+    /// enum inválido (p.ej. LaunchProfile) → por defecto; listas de ids (DismissedAnnouncementIds, RemindedPlaytestIds)
+    /// sin null/vacíos ni duplicados y con máx. 200 (los más recientes, que son los del final).
     /// </summary>
     public LauncherSettings Load()
     {
@@ -78,7 +85,8 @@ public sealed class SettingsStore
 
     /// <summary>
     /// Guarda de forma atómica (FileSystemUtil.WriteAllTextAtomic, que ya reintenta). Devuelve false (y registra) si falla.
-    /// Nunca lanza. Serializa sobre una copia (<see cref="LauncherSettings.Clone"/>) tomada bajo el lock.
+    /// Nunca lanza. Serializa sobre una copia (<see cref="LauncherSettings.Clone"/>) tomada bajo el lock; en la copia se
+    /// sanean las listas de ids igual que al cargar (el objeto del llamador no se toca).
     /// </summary>
     public bool Save(LauncherSettings settings)
     {
@@ -94,6 +102,8 @@ public sealed class SettingsStore
             {
                 var copy = settings.Clone();
                 copy.LaunchArguments ??= "";
+                copy.DismissedAnnouncementIds = SanitizeIdList(copy.DismissedAnnouncementIds);
+                copy.RemindedPlaytestIds = SanitizeIdList(copy.RemindedPlaytestIds);
                 var json = JsonSerializer.Serialize(copy, JsonOptions);
                 FileSystemUtil.WriteAllTextAtomic(_filePath, json);
             }
@@ -257,6 +267,9 @@ public sealed class SettingsStore
         if (effective.IsEnum)
             return TryConvertEnum(element, effective, out value);
 
+        if (type == typeof(List<string>))
+            return TryConvertStringList(element, out value);
+
         try
         {
             value = element.Deserialize(type, JsonOptions);
@@ -289,6 +302,50 @@ public sealed class SettingsStore
         return true;
     }
 
+    // Lista de textos: se aceptan los elementos que son texto y se ignoran los demás (un número suelto no tira la lista).
+    private static bool TryConvertStringList(JsonElement element, out object? value)
+    {
+        value = null;
+        if (element.ValueKind != JsonValueKind.Array)
+            return false;
+
+        var list = new List<string>();
+        foreach (var item in element.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.String)
+                list.Add(item.GetString()!);
+        }
+
+        value = list;
+        return true;
+    }
+
+    /// <summary>
+    /// Sanea una lista de ids recordados: quita null, vacíos, los demasiado largos y los repetidos (recorta espacios), y deja
+    /// como mucho <see cref="MaxRememberedIds"/>. Los ids se van añadiendo al final, así que se conservan los del final (los
+    /// más recientes) y, de un repetido, su última aparición. Devuelve siempre una lista nueva.
+    /// </summary>
+    internal static List<string> SanitizeIdList(IEnumerable<string?>? ids)
+    {
+        if (ids == null)
+            return new List<string>();
+
+        var source = ids as IList<string?> ?? ids.ToList();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var newestFirst = new List<string>();
+        for (var i = source.Count - 1; i >= 0 && newestFirst.Count < MaxRememberedIds; i--)
+        {
+            var id = source[i]?.Trim();
+            if (string.IsNullOrEmpty(id) || id.Length > MaxRememberedIdLength)
+                continue;
+            if (seen.Add(id))
+                newestFirst.Add(id);
+        }
+
+        newestFirst.Reverse();
+        return newestFirst;
+    }
+
     private static void Sanitize(LauncherSettings settings)
     {
         var defaults = new LauncherSettings();
@@ -298,6 +355,10 @@ public sealed class SettingsStore
         settings.LaunchArguments ??= "";
         if (settings.SchemaVersion < 1)
             settings.SchemaVersion = defaults.SchemaVersion;
+
+        // Listas de ids: "null" en el JSON, vacíos, repetidos o demasiados (se conservan los 200 más recientes).
+        settings.DismissedAnnouncementIds = SanitizeIdList(settings.DismissedAnnouncementIds);
+        settings.RemindedPlaytestIds = SanitizeIdList(settings.RemindedPlaytestIds);
 
         foreach (var property in PersistedProperties)
         {

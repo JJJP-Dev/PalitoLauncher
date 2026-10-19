@@ -82,6 +82,8 @@ internal static class WpfHost
         Directory.CreateDirectory(AppDataRoot);
         AppPaths.OverrideRootForTests(AppDataRoot);
         HttpClient.DefaultProxy = new WebProxy(BlackholeProxy);
+        // Nunca notificaciones de Windows reales (aviso de las sesiones de prueba) en el escritorio de quien ejecuta los tests.
+        PalitoLauncher.Services.WindowsNotification.SuppressForTests = true;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => TryDelete(AppDataRoot);
 
         var ready = new TaskCompletionSource<Dispatcher>(TaskCreationOptions.RunContinuationsAsynchronously);

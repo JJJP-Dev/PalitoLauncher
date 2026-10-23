@@ -43,6 +43,7 @@ public sealed class MissionsProvider
         "session_start", "session_end", "host_started", "join_attempt", "join_result", "match_joined", "player_joined",
         "player_left", "match_left", "wave_started", "waves_finished", "element_set", "ability_cast", "reaction",
         "enemy_killed", "cheat_used", "player_died", "player_revived", "hitch", "perf", "net", "log_error",
+        "level_up", "upgrade_picked", "offer_action", "match_over", "player_downed",
     };
 
     private static readonly JsonDocumentOptions DocumentOptions = new()

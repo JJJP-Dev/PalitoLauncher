@@ -91,17 +91,17 @@ id nuevo** en esta tabla; no reutilices uno existente para otra cosa.
 | `slot` | `1`, `2`, `3`, `4` | Hueco del jugador (J1…J4) |
 | `element` | `fire`, `water`, `electric` | |
 | `character` | `ember`, `tide`, `volt` | Brasa, Marea y Voltio (#162). Los ids del catálogo de progresión; Filo será `blade` |
-| `ability` | `basic`, `burst`, `mark` | Estallido = `burst`, Marca = `mark`. Con los personajes (#162), un id por habilidad |
+| `ability` | `basic`, `burst`, `mark`, `ember_flare`, `ember_firewall`, `ember_drizzle`, `tide_wave`, `tide_bubble`, `tide_spark`, `volt_bolt`, `volt_coil`, `volt_short` | Estallido = `burst`, Marca = `mark` (de prueba). Las demás, con los ids del catálogo (#162): Llamarada, Muro ígneo, Llovizna, Ola, Burbuja prisión, Chispa, Rayo, Bobina y Cortocircuito. Cada habilidad nueva añade el suyo |
 | `variant` | `vapor_fire_water`, `vapor_water_fire`, `electrocution_water_electric`, `electrocution_electric_water`, `overload_electric_fire`, `overload_fire_electric` | Los mismos ids que ya usa `CombatEventLogger` |
 | `me` | `aura`, `detonator`, `both`, `none` | Papel del jugador local en una reacción. `both` = reacción en solitario propia |
-| `enemy` | `chaser`, `dummy` | |
+| `enemy` | `chaser`, `arc`, `dummy` | `arc` es el dron |
 | `by` | `me`, `ally`, `none` | Quién lo hizo: el jugador local, otro jugador o nadie (truco, oleada, entorno) |
 | `source` | `basic`, `ability`, `reaction`, `cheat`, `other` | Qué lo causó |
 | `target` | `loopback`, `lan`, `vpn`, `public`, `invalid` | Tipo de dirección a la que se intenta unir (ver `join_attempt`) |
 | `upgrade` | `basic_twin_shot`, `basic_long_barrel`, `basic_tempo`, `stat_aura_hunter`, `aura_lingering`, `aura_wide_skill`, `coop_relay`, `coop_assist`, `def_vitality`, `mov_tailwind`, `ember_wall_detonate`, `ember_eternal_flame`, `tide_whirlpool`, `tide_tsunami_heart`, `volt_surge`, `volt_coil_detonator`, `econ_magnet`, `mov_swift`, `def_thick_skin`, `econ_breather` | Los ids del catálogo de progresión (#78). `econ_breather` es Respiro. Cada mejora nueva añade el suyo |
 | `rarity` | `common`, `rare`, `epic`, `legendary`, `duo`, `evolution` | Rareza de una mejora |
 | `action` | `reroll`, `banish`, `skip` | Qué hizo el jugador con una oferta en vez de elegir (#78) |
-| `cheat` | `spawn_chaser`, `spawn_chaser_10`, `kill_all`, `invulnerable`, `damage_all`, `heal_all`, `next_wave`, `reset_waves`, `give_xp`, `give_reroll`, `element_cycle`, `reaction_lab` | Un id por botón del panel F1; `element_cycle` es la tecla F6; `reaction_lab`, cualquier botón del panel del laboratorio de reacciones |
+| `cheat` | `spawn_chaser`, `spawn_chaser_10`, `spawn_arc`, `spawn_arc_10`, `kill_all`, `invulnerable`, `damage_all`, `heal_all`, `next_wave`, `reset_waves`, `give_xp`, `give_reroll`, `give_skill`, `test_skills`, `element_cycle`, `reaction_lab` | Un id por botón del panel F1; `element_cycle` es la tecla F6; `reaction_lab`, cualquier botón del panel del laboratorio de reacciones |
 
 ## 5. Catálogo de eventos
 
@@ -212,7 +212,7 @@ Al empezar cada oleada, en todas las ventanas (también al saltar con trucos).
 
 #### `waves_finished` · Obligatorio
 
-Una vez por partida, cuando ya no quedan oleadas por salir (pasados los 3 minutos).
+Una vez por partida, cuando ya no quedan oleadas por salir (pasados los 10 minutos del horario).
 
 | Campo | Tipo | Valor |
 |---|---|---|
@@ -249,14 +249,26 @@ Cuando el jugador local vuelve a tirar, descarta una opción o salta una oferta 
 | `upgrade` | id | La mejora descartada con `banish`; `none` con `reroll` y `skip` |
 | `level` | entero | Nivel de la subida de la oferta |
 | `match_time` | entero | Segundos de partida |
+| `ability` | id | Con `banish` de una habilidad (#162), la habilidad descartada; `none` en los demás casos (y entonces `upgrade` dice qué mejora fue) |
 
-#### `match_over` · Obligatorio
+#### `skill_gained` · Obligatorio
 
-Una vez por partida, cuando termina (#52), en todas las ventanas. Ahora solo hay derrota: todos los jugadores derribados.
+Cuando el jugador local coge de su oferta una habilidad nueva o un nivel de una que tiene, y el host lo acepta (#162). Solo en su ventana. La habilidad inicial con la que empieza cada partida no lo escribe.
 
 | Campo | Tipo | Valor |
 |---|---|---|
-| `result` | id | `defeat`. La victoria llegará con el jefe (#93) |
+| `ability` | id | La habilidad (ver [`ability`](#4-valores-fijos-enumeraciones)) |
+| `ability_level` | entero | `1` si es nueva; `2` o `3` si es un nivel |
+| `level` | entero | Nivel de la subida de la que salió la oferta |
+| `match_time` | entero | Segundos de partida |
+
+#### `match_over` · Obligatorio
+
+Una vez por partida, cuando termina (#52), en todas las ventanas: derrota (todos los jugadores derribados) o victoria (acaba el horario de oleadas y muere su último enemigo).
+
+| Campo | Tipo | Valor |
+|---|---|---|
+| `result` | id | `defeat` o `victory` |
 | `match_time` | entero | Segundos que duró la partida, iguales en todas las ventanas |
 | `waves` | entero | Oleadas que habían empezado |
 
@@ -297,7 +309,7 @@ Cuando el jugador local lanza una habilidad que sí sale (pasada su recarga). El
 
 | Campo | Tipo | Valor |
 |---|---|---|
-| `ability` | id | `burst`, `mark`… |
+| `ability` | id | Ver [`ability`](#4-valores-fijos-enumeraciones): `burst`, `tide_wave`… |
 | `element` | id | Elemento con el que se lanza |
 
 #### `reaction` · Obligatorio
@@ -319,7 +331,7 @@ Cuando muere un enemigo, en todas las ventanas. Los muñecos que reviven tambié
 
 | Campo | Tipo | Valor |
 |---|---|---|
-| `enemy` | id | `chaser`, `dummy` |
+| `enemy` | id | `chaser`, `arc`, `dummy` |
 | `by` | id | `me`, `ally` o `none` (por ejemplo, «Matar a todos») |
 | `source` | id | Qué dio el golpe final: `basic`, `ability`, `reaction` o `cheat` |
 
